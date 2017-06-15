@@ -564,9 +564,16 @@ def compact_remaining_publish_instances(context):
         )
 
         manage_lock_for_environment(
-            context['DynamoDbTable',
-            context['StackPrefix'] + '_backup_lock'],
-            'unlock')
+            context['DynamoDbTable'],
+            context['StackPrefix'] + '_backup_lock',
+            'unlock'
+        )
+
+        response = {
+            'status': 'Success'
+        }
+
+    return response
 
 
 def sns_message_processor(event, context):
@@ -613,6 +620,7 @@ def sns_message_processor(event, context):
         }
     }
 
+    responses=[]
     for record in event['Records']:
         message_text = record['Sns']['Message']
         logger.debug(message_text)
@@ -693,7 +701,8 @@ def sns_message_processor(event, context):
                 datetime.datetime.utcnow().isoformat()[:-3] + 'Z',
                 **supplement
             )
-            return response
+
+            responses.append(response)
         else:
             cmd_id = message['commandId']
 
@@ -753,6 +762,7 @@ def sns_message_processor(event, context):
                     InstanceInfo=instance_info,
                     LastCommand=cmd_id
                 )
+                responses.append(response)
 
             elif state == 'STOP_AUTHOR_PRIMARY':
                 ssm_params = ssm_common_params.copy()
@@ -777,6 +787,8 @@ def sns_message_processor(event, context):
                         InstanceInfo=instance_info,
                         LastCommand=cmd_id
                     )
+
+                    responses.append(response)
                 elif task == 'offline-compaction-snapshot':
                     ssm_params.update(
                         {
@@ -798,6 +810,8 @@ def sns_message_processor(event, context):
                         InstanceInfo=instance_info,
                         LastCommand=cmd_id
                     )
+
+                    responses.append(response)
 
             elif state == 'OFFLINE_COMPACTION':
                 ssm_params = ssm_common_params.copy()
@@ -821,6 +835,7 @@ def sns_message_processor(event, context):
                     InstanceInfo=instance_info,
                     LastCommand=cmd_id
                 )
+                responses.append(response)
 
             elif state == 'OFFLINE_BACKUP':
                 ssm_params = ssm_common_params.copy()
@@ -848,6 +863,8 @@ def sns_message_processor(event, context):
                     LastCommand=cmd_id
                 )
 
+                responses.append(response)
+
             elif state == 'START_AUTHOR_PRIMARY':
                 ssm_params = ssm_common_params.copy()
                 ssm_params.update(
@@ -873,6 +890,8 @@ def sns_message_processor(event, context):
                     LastCommand=cmd_id
                 )
 
+                responses.append(response)
+
             elif state == 'START_AUTHOR_STANDBY':
 
                 # this is the success notification message
@@ -886,6 +905,11 @@ def sns_message_processor(event, context):
                     manage_autoscaling_standby(stack_prefix, 'exit', byInstanceIds=[publish_dispatcher_id])
 
                     manage_lock_for_environment(dynamodb_table, stack_prefix + '_backup_lock', 'unlock')
+
+                    response = {
+                        'status': 'Success'
+                    }
+                    responses.append(response)
 
                 elif task == 'offline-compaction-snapshot':
                     # move author-dispatcher instances out of standby
@@ -922,6 +946,8 @@ def sns_message_processor(event, context):
                         SubState='PUBLISH_READY'
                     )
 
+                    responses.append(response)
+
             elif state == 'COMPACT_REMAINING_PUBLISHERS':
 
                 compaction_context = {
@@ -942,9 +968,11 @@ def sns_message_processor(event, context):
                     'InstanceInfo': instance_info
                 }
                 logger.debug('Dumping context for remaining publish compaction: {}'.format(compaction_context))
-                compact_remaining_publish_instances(compaction_context)
+                response = compact_remaining_publish_instances(compaction_context)
+
+                responses.append(response)
 
             else:
                 raise RuntimeError('Unexpected state {} for {}'.format(state, cmd_id))
 
-            return response
+    return responses

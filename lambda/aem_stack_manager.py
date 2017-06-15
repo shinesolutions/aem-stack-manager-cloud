@@ -364,6 +364,7 @@ def sns_message_processor(event, context):
 
         dynamodb_table = run_command['dynamodb-table']
 
+    responses=[]
     for record in event['Records']:
         message_text = record['Sns']['Message']
         logger.debug(message_text)
@@ -407,7 +408,9 @@ def sns_message_processor(event, context):
                 respone['Command']['RequestedDateTime'],
                 ExternalId=external_id
             )
-            return respone
+
+            responses.append(respone)
+
         elif 'commandId' in message:
             cmd_id = message['commandId']
             update_state_in_dynamodb(
@@ -416,5 +419,13 @@ def sns_message_processor(event, context):
                 message['status'],
                 message['eventTime']
             )
+
+            response = {
+                'status': message['status']
+            }
+            responses.append(response)
+
         else:
             logger.error('Unknown message found  and ignored')
+
+    return responses
