@@ -35,4 +35,5 @@ done
 
 if [ "$status" != 'Success' ]; then
   echo "Task has not reached \"Success\" status after one hour. Please check"
+  exit 1
 fi
