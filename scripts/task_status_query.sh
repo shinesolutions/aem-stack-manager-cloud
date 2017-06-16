@@ -33,7 +33,9 @@ for (( index = 0; index < 720; index++ )); do
   sleep 5
 done
 
+rm -f payload.json response.json
+
 if [ "$status" != 'Success' ]; then
-  echo "Task has not reached \"Success\" status after one hour. Please check"
+  echo "Task has eitehr failed or not reached \"Success\" status after one hour. Please check"
   exit 1
 fi
