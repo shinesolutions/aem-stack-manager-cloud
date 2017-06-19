@@ -142,7 +142,7 @@ def export_package(message, ssm_common_params):
         'Parameters': {
             'packageGroup': [message['details']['package_group']],
             'packageName': [message['details']['package_name']],
-            'packageFilter': [json.dumps(message['details']['package_filter'])]
+            'packageFilter': [json.dumps(encoded)]
         }
     }
     params = ssm_common_params.copy()
