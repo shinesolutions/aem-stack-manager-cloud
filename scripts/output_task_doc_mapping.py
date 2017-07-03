@@ -34,7 +34,8 @@ if __name__ == '__main__':
       "PromoteAuthor": "promote-author",
       "ImportPackage": "import-package",
       'WaitUntilReady': "wait-until-ready",
-      "EnableCrxde": "enable-crxde"
+      "EnableCrxde": "enable-crxde",
+      "RunAdhocPuppet": "run-adhoc-puppet"
     }
 
     messenger_config = {
