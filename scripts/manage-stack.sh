@@ -3,8 +3,8 @@
 set -o nounset
 set -o errexit
 
-if [[ "$#" -gt 1 ]]; then
-  echo "Usage: ${0} [config_path]"
+if [[ "$#" -lt 1 ]] || [[ "$#" -gt 2 ]]; then
+  echo "Usage: ${0} <stack_type> [config_path]"
   exit 1
 fi
 
@@ -19,9 +19,12 @@ else
   exit 1
 fi
 
+
+stack_type="${1}"
+
 config_paths=()
-if [[ "$#" -gt 0 ]]; then
-  IFS=':' read -ra temp_config_paths <<< "${1}"
+if [[ "$#" -eq 2 ]]; then
+  IFS=':' read -ra temp_config_paths <<< "${2}"
   for p in "${temp_config_paths[@]}"; do
     if [[ -n "${p}" ]]; then
       config_paths+=( "${p}" )
@@ -54,15 +57,15 @@ echo "Start ${action_verb} AEM Stack Manager Cloud native implementation stack"
 
 if [ -z "${extra_vars+x}" ]; then
   ANSIBLE_LOG_PATH=$log_path \
-    ansible-playbook -v ansible/playbooks/aem-stack-manager-cloud.yaml \
+    ansible-playbook -v ansible/playbooks/"${stack_type}".yaml \
     -i ansible/inventory/hosts \
     --tags "${tag}"
 else
-  ANSIBLE_LOG_PATH=$log_path \
-    ansible-playbook -v ansible/playbooks/aem-stack-manager-cloud.yaml \
+  ANSIBLE_LOG_PATH="${log_path}" \
+    ansible-playbook -v ansible/playbooks/"${stack_type}".yaml \
     -i ansible/inventory/hosts \
     --tags "${tag}" \
     "${extra_vars[@]}"
 fi
 
-echo "Finished ${action_verb} aem stack manger cloud stack"
+echo "Finished ${action_verb} aem ${stack_type} stack"

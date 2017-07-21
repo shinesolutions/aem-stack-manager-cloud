@@ -76,12 +76,12 @@ def purge_old_snapshots(params):
 
 def handler(event, context):
 
-    if 'SnapshotType' not in context or context['SnapshotType'] not in ['live', 'offline']:
+    if 'SnapshotType' not in event or event['SnapshotType'] not in ['live', 'offline', 'orchestration']:
         logger.error('SnapshotType [live|offline] must be specified')
-        raise RuntimeError('\'SnapshotType\' is expected in inputs and have value of \'live\' or \'offline\'')
+        raise RuntimeError('\'SnapshotType\' is expected in inputs and have value of \'live\', \'offline\', or \'orchestration\'')
 
-    if 'Age' not in context or not re.match(r'^\d+[hdw]$', context['Age'], re.I):
+    if 'Age' not in event or not re.match(r'^\d+[hdw]$', event['Age'], re.I):
         logger.error('Age must be specified in xx[h|d|m] format')
         raise RuntimeError('\'Age\' is expected in inputs and in correct format')
 
-    purge_old_snapshots(context)
+    purge_old_snapshots(event)

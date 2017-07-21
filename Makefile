@@ -24,11 +24,16 @@ validate:
 
 # stacks set management targets
 create-stack-manager-cloud:
-	./scripts/create-stack.sh  $(config_path)
+	./scripts/create-stack.sh aem-stack-manager-cloud $(config_path)
 
 delete-stack-manager-cloud:
-	./scripts/delete-stack.sh  $(config_path)
+	./scripts/delete-stack.sh aem-stack-manager-cloud $(config_path)
 
+create-snapshots-purge-cloud:
+	./scripts/create-stack.sh aem-snapshots-purge $(config_path)
+
+delete-snapshots-purge-cloud:
+	./scripts/delete-stack.sh aem-snapshots-purge $(config_path)
 # utility targets
 
 package:
