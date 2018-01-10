@@ -53,7 +53,7 @@ Under *scripts*, `generate.sh` is used to create the CloudFormation Template for
 
 
   A sample yaml config file can be found under
-    `ansible/group_vars/aem-stack-manager-cloud.yaml`
+    `example/user_config.yaml`
 
 * To create Snapthos Purge related resources:
 

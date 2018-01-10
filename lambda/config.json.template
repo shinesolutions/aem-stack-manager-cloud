@@ -1,6 +1,6 @@
 {
   "ec2_run_command": {
-    "cmd-output-bucket": "mb-aem-stack-builder",
+    "cmd-output-bucket": "aem-stack-builder",
     "cmd-output-prefix": "SSMOutput",
     "status-topic-arn": "topic",
     "ssm-service-role-arn": "role",

@@ -17,6 +17,11 @@ Parameters:
     Type: String
     Description: AEM Stack Manager Version
     Default: "v2"
+  
+  StackPrefix:
+    Type: String
+    Description: AEM Stack Manager Prefix
+    Default: AEM-Stack
 
 Resources:
   StackManagerTable:
@@ -55,24 +60,24 @@ Resources:
           ProvisionedThroughput:
             ReadCapacityUnits: 1
             WriteCapacityUnits: 1
-      TableName: !Sub AemStackManagerTable${Version}
+      TableName: !Sub ${StackPrefix}-AemStackManagerTable${Version}
 
   StackManagerTopic:
     Type: AWS::SNS::Topic
     Properties:
       DisplayName: AEM Stack Manager Topic
-      TopicName: !Sub AemStackManager${Version}
+      TopicName: !Sub ${StackPrefix}-AemStackManager${Version}
 
   TaskStatusTopic:
     Type: AWS::SNS::Topic
     Properties:
       DisplayName: !Sub AEM Stack Manager Topic
-      TopicName: !Sub AemStackManagerStatus${Version}
+      TopicName: !Sub ${StackPrefix}-AemStackManagerStatus${Version}
 
   LambdaServiceRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub ${AWS::Region}-aem-stack-manager${Version}-lambda-service-role
+      RoleName: !Sub ${AWS::Region}-${StackPrefix}-aem-stack-manager${Version}-lambda-service-role
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -135,7 +140,7 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Description: AEM Stack Manager Function
-      FunctionName: !Sub AemStackManager${Version}
+      FunctionName: !Sub ${StackPrefix}-AemStackManager${Version}
       Code:
         S3Bucket: !Ref S3Bucket
         S3Key: !Sub ${S3Prefix}/aem_stack_manager.zip
@@ -176,7 +181,7 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Description: AEM Task Status Query
-      FunctionName: !Sub AemTaskQuery${Version}
+      FunctionName: !Sub ${StackPrefix}-AemTaskQuery${Version}
       Code:
         S3Bucket: !Ref S3Bucket
         S3Key: !Sub ${S3Prefix}/aem_task_query.zip
@@ -247,13 +252,13 @@ Resources:
     Type: AWS::SNS::Topic
     Properties:
       DisplayName: AEM Backup
-      TopicName: !Sub AemOfflineBackup${Version}
+      TopicName: !Sub ${StackPrefix}-AemOfflineBackup${Version}
 
   OfflineBackupLambada:
     Type: AWS::Lambda::Function
     Properties:
       Description: AEM Offline Backup Function
-      FunctionName: !Sub AemOfflineBackup${Version}
+      FunctionName: !Sub ${StackPrefix}-AemOfflineBackup${Version}
       Code:
         S3Bucket: !Ref S3Bucket
         S3Key: !Sub ${S3Prefix}/aem_offline_snapshot.zip
@@ -334,7 +339,7 @@ Resources:
                 Resource:
                   - !Ref OfflineBackupTopic
                   - !Ref TaskStatusTopic
-      RoleName: !Sub ${AWS::Region}-aem-stack-manager${Version}-service-role
+      RoleName: !Sub ${AWS::Region}-${StackPrefix}-aem-stack-manager${Version}-service-role
 
 Outputs:
   SSMServiceRoleArn:
