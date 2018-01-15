@@ -69,7 +69,6 @@ def dict_task_mapping():
             'WaitUntilReady': "wait-until-ready",
             "EnableCrxde": "enable-crxde",
             "RunAdhocPuppet": "run-adhoc-puppet",
-            "SSMStackName" : "StackName"
             }
     return messenger_task_mapping
 
