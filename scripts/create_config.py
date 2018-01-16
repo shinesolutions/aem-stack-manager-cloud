@@ -62,6 +62,7 @@ def dict_task_mapping():
             "ManageService": "manage-service",
             "OfflineSnapshot": "offline-snapshot",
             "ExportPackage": "export-package",
+            "ExportPackages": "export-packages",
             "DeployArtifact": "deploy-artifact",
             "OfflineCompaction": "offline-compaction",
             "PromoteAuthor": "promote-author",
@@ -69,6 +70,7 @@ def dict_task_mapping():
             'WaitUntilReady': "wait-until-ready",
             "EnableCrxde": "enable-crxde",
             "RunAdhocPuppet": "run-adhoc-puppet",
+            "LiveSnapshot": "live-snapshot",
             }
     return messenger_task_mapping
 
