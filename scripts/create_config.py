@@ -110,7 +110,7 @@ def create_config(messenger_dict, offline_snapshot):
     ec2_run_command.update(offline_snapshot)
     return ec2_run_command
 
-def save_dict(tmp_file, messenger_dict):
+def save_config(tmp_file, messenger_dict):
         # Update ec2_run_command dict
     ec2_run_command.update(messenger_dict)
     ec2_run_command.update(offline_snapshot)
@@ -141,7 +141,7 @@ offline_snapshot = dict_offline_snapshot(backuparn)
 
 messenger_dict = messenger_mapping_list(stack_outputs, messenger_task_mapping)
 create_config(messenger_dict, offline_snapshot)
-save_dict(tmp_file, messenger_dict)
+save_config(tmp_file, messenger_dict)
 
 try:
     s3_upload(tmp_file, stack_prefix)
