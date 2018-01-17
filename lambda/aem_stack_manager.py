@@ -414,6 +414,7 @@ method_mapper = {
     'deploy-artifact': deploy_artifact,
     'deploy-artifacts': deploy_artifacts,
     'export-package': export_package,
+    'export-packages': export_packages,
     'import-package': import_package,
     'promote-author': promote_author,
     'enable-crxde': enable_crxde,
