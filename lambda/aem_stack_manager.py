@@ -49,7 +49,7 @@ def instance_ids_by_tags(filters):
 
 
 def send_ssm_cmd(cmd_details):
-    print('calling ssm commands')
+    logger.info('calling ssm commands')
     return json.loads(json.dumps(ssm.send_command(**cmd_details), cls=MyEncoder))
 
 
