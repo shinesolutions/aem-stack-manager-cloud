@@ -1,10 +1,9 @@
 #!/bin/bash
-
 set -o nounset
 set -o errexit
 
-if [[ "$#" -lt 1 ]] || [[ "$#" -gt 2 ]]; then
-  echo "Usage: ${0} <stack_type> [config_path]"
+if [[ "$#" -lt 2 ]] || [[ "$#" -gt 3 ]]; then
+  echo "Usage: ${0} <stack_type> <stack_prefix> [config_path]"
   exit 1
 fi
 
@@ -19,12 +18,12 @@ else
   exit 1
 fi
 
-
 stack_type="${1}"
+stack_prefix="${2}"
 
 config_paths=()
-if [[ "$#" -eq 2 ]]; then
-  IFS=':' read -ra temp_config_paths <<< "${2}"
+if [[ "$#" -eq 3 ]]; then
+  IFS=':' read -ra temp_config_paths <<< "${3}"
   for p in "${temp_config_paths[@]}"; do
     if [[ -n "${p}" ]]; then
       config_paths+=( "${p}" )
@@ -33,12 +32,12 @@ if [[ "$#" -eq 2 ]]; then
 fi
 
 run_id=${RUN_ID:-$(date +%Y-%m-%d:%H:%M:%S)}
-log_path=logs/"${run_id}-${tag}".log
+log_path=logs/$stack_prefix/$run_id-${tag}-$(echo "$stack_type" | sed 's/\//-/g').log
 
 # Construct Ansible extra_vars flags. If `config_path` is set, all files
 # directly under the directory with extension `.yaml` or `.yml` will be added.
 # The search for config files _will not_ descend into subdirectories.
-
+extra_vars=(--extra-vars "stack_prefix=$stack_prefix")
 if [[ ${#config_paths[@]} -gt 0 ]]; then
   OIFS="${IFS}"
   IFS=$'\n'
@@ -48,24 +47,18 @@ if [[ ${#config_paths[@]} -gt 0 ]]; then
       extra_vars+=(--extra-vars "@$config_file")
     done
   done
-
   IFS="${OIFS}"
 fi
 
-mkdir -p "logs"
-echo "Start ${action_verb} AEM Stack Manager Cloud native implementation stack"
+echo "Extra vars:"
+echo "  ${extra_vars[*]}"
 
-if [ -z "${extra_vars+x}" ]; then
-  ANSIBLE_LOG_PATH=$log_path \
-    ansible-playbook -v ansible/playbooks/"${stack_type}".yaml \
-    -i ansible/inventory/hosts \
-    --tags "${tag}"
-else
-  ANSIBLE_LOG_PATH="${log_path}" \
-    ansible-playbook -v ansible/playbooks/"${stack_type}".yaml \
-    -i ansible/inventory/hosts \
-    --tags "${tag}" \
-    "${extra_vars[@]}"
-fi
-
-echo "Finished ${action_verb} aem ${stack_type} stack"
+mkdir -p "logs/$stack_prefix"
+echo "Start ${action_verb} $stack_prefix $stack_type stack"
+ANSIBLE_LOG_PATH=$log_path \
+  ansible-playbook -v ansible/playbooks/"$stack_type".yaml \
+  -i ansible/inventory/hosts \
+  --module-path ansible/library/ \
+  --tags "${tag}" \
+  "${extra_vars[@]}"
+echo "Finished ${action_verb} $stack_prefix $stack_type stack"

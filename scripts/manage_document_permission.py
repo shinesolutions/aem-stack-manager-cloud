@@ -14,7 +14,7 @@ __license__ = 'Apache License, Version 2.0'
 
 
 def get_document_names(stack_name):
-    stack_outputs = boto3.resource('cloudformation').Stack(stack_name).outputs
+    stack_outputs = boto3.resource('cloudformation').Stack(stack_prefix + '-' + stack_name).outputs
 
     # dumps the document to stand out for import as configuration
     config = {output['OutputKey']:output['OutputValue'] for output in stack_outputs}
@@ -30,7 +30,9 @@ def get_document_names(stack_name):
       "OfflineCompaction": "offline-compaction",
       "PromoteAuthor": "promote-author",
       "ImportPackage": "import-package",
-      'WaitUntilReady': "wait-until-ready"
+      'WaitUntilReady': "wait-until-ready",
+      'EnableCrxde': "enable-crxde",
+      "RunAdhocPuppet": "run-adhoc-puppet"
     }
 
     sts = boto3.client('sts')
@@ -71,13 +73,13 @@ def deauthorize_documents(documents, acct_ids):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) < 4:
-        print('Error, Usage: {} stack_name [add|remove] acct[, acct]'.format(sys.argv[0]))
+    if len(sys.argv) < 5:
+        print('Error, Usage: {} stack_prefix stack_name [add|remove] acct[, acct]'.format(sys.argv[0]))
         exit(1)
-
-    stack_name = sys.argv[1]
-    action_type = sys.argv[2]
-    acct_ids = sys.argv[3:]
+    stack_prefix = sys.argv[1]
+    stack_name = sys.argv[2]
+    action_type = sys.argv[3]
+    acct_ids = sys.argv[4:]
 
     documents = get_document_names(stack_name)
 

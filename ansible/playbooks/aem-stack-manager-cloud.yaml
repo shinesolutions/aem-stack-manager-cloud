@@ -29,19 +29,11 @@
 
     - name: Create SSM Document Stack
       cloudformation:
-        stack_name: "{{ stack_manager.ssm_stack_name }}"
+        stack_name: "{{ stack_prefix }}-{{ stack_manager.ssm_stack_name }}"
         region: "{{ aws.region }}"
         state: present
         disable_rollback: false
         template: "{{ stack_manager_tmp }}/ssm_template.json"
-      tags:
-        - create
-
-    - name: Create Stack Manager Task and SSM Document Name Mapping File
-      command: >
-        python "{{ stack_manager_cwd }}"/scripts/output_task_doc_mapping.py
-               "{{ stack_manager.ssm_stack_name }}"
-               "{{ stack_manager_tmp }}"/task_doc_mapping.json
       tags:
         - create
 
@@ -66,7 +58,7 @@
     - name: Upload Lambada Function Zip Archives to S3
       command: >
               aws s3 sync "{{ stack_manager_tmp }}"
-                  s3://{{ stack_manager.s3_bucket }}/{{ stack_manager.s3_prefix }}
+                  s3://{{ stack_manager.s3_bucket }}/{{stack_prefix }}/{{ stack_manager.s3_prefix }}
                   --include "*.zip"
       tags:
         - create
@@ -74,48 +66,39 @@
     - name: >
         Create AEM Stack Manager Resources
       cloudformation:
-        stack_name: "{{ stack_manager.stack_name }}"
+        stack_name: "{{ stack_prefix }}-{{ stack_manager.stack_name }}"
         region: "{{ aws.region }}"
         state: present
         disable_rollback: false
         template: "{{ stack_manager_cwd }}/cloudformation/aem-stack-manager-cloud.yaml"
         template_parameters:
           S3Bucket: "{{ stack_manager.s3_bucket }}"
-          S3Prefix: " {{ stack_manager.s3_prefix }}"
+          S3Prefix: "{{ stack_prefix }}/{{ stack_manager.s3_prefix }}"
           Version: "{{ stack_manager.version}}"
+          StackPrefix: "{{ stack_prefix }}"
       register: stack_info
       tags:
         - create
 
-    - name: Update config.json template to the stack output
-      shell:  >-
-        jq --slurpfile mapping "{{ stack_manager_tmp }}"/task_doc_mapping.json \
-           --arg statusarn "{{ stack_info.stack_outputs.TaskStatusTopicArn }}" \
-           --arg role "{{ stack_info.stack_outputs.SSMServiceRoleArn}}" \
-           --arg bucket "{{ stack_manager.s3_bucket }}" \
-           --arg backuparn "{{ stack_info.stack_outputs.BackupTopicArn}}" \
-           --arg dbtable "{{ stack_info.stack_outputs.AemStackManagerTableName }}" \
-        '."document_mapping"=$mapping[0]|'\
-        '."ec2_run_command"."status-topic-arn"=$statusarn|'\
-        '."ec2_run_command"."ssm-service-role-arn"=$role|'\
-        '."ec2_run_command"."cmd-output-bucket"=$bucket|'\
-        '."ec2_run_command"."dynamodb-table"=$dbtable|'\
-        '."offline_snapshot"."sns-topic-arn"=$backuparn' \
-           "{{ stack_manager_cwd }}"/lambda/config.json.template  >  "{{ stack_manager_tmp }}"/config.json
-      when: stack_info|succeeded
+    - name: Create Stack Manager Task and SSM Document Name Mapping File
+      command: >
+        python "{{ stack_manager_cwd }}"/scripts/create_config.py
+               "{{ stack_prefix }}"
+               "{{ stack_manager.stack_name }}"
+               "{{ stack_manager.s3_bucket }}" 
+               "{{ stack_prefix }}/{{ stack_manager.s3_prefix }}" 
+               "{{ stack_info.stack_outputs.TaskStatusTopicArn }}" 
+               "{{ stack_info.stack_outputs.SSMServiceRoleArn }}" 
+               "{{ stack_manager.s3_bucket }}" 
+               "{{ stack_info.stack_outputs.BackupTopicArn }}" 
+               "{{ stack_info.stack_outputs.AemStackManagerTableName }}"
+      tags:
+        - create
+
       tags:
        - create
-
-    - name: Upload config.json to S3
-      s3:
-         bucket: "{{ stack_manager.s3_bucket }}"
-         mode: put
-         src: "{{ stack_manager_tmp }}/config.json"
-         object: "{{ stack_manager.s3_prefix }}/config.json"
-      when: stack_info|succeeded
-      tags:
-       - create
-
+"{{ stack_prefix }} {{ stack_manager.stack_name }} {{ stack_manager.s3_bucket }} {{ stack_prefix }}/{{ stack_manager.s3_prefix }} {{ stack_info.stack_outputs.TaskStatusTopicArn }} {{ stack_info.stack_outputs.SSMServiceRoleArn}} {{ stack_manager.s3_bucket }} {{ stack_info.stack_outputs.BackupTopicArn}} {{ stack_info.stack_outputs.AemStackManagerTableName }}"
+    
     - name: set TTL attribute on the DynamoDB Table
       command: >
         aws dynamodb update-time-to-live --table-name "{{stack_info.stack_outputs.AemStackManagerTableName}}"
@@ -128,7 +111,7 @@
 
     - name: Check if Stack Manager Stack Exists
       command: >
-        aws cloudformation describe-stacks --stack-name "{{ stack_manager.stack_name }}"
+        aws cloudformation describe-stacks --stack-name "{{ stack_prefix }}-{{ stack_manager.stack_name }}"
              --query 'Stacks[].StackName' --region "{{ aws.region }}"
       ignore_errors: True
       register: stack_query
@@ -137,7 +120,7 @@
 
     - name: Report Stack Manager Problem if Any
       debug:
-        msg: Stack "{{ stack_manager.stack_name }}" does not exist or some other errors occured
+        msg: Stack "{{stack_prefix }}-{{ stack_manager.stack_name }}" does not exist or some other errors occured
       when:
         "stack_query.rc != 0"
       tags:
@@ -145,7 +128,7 @@
 
     - name: Delete AEM Stack Manager Stack
       cloudformation:
-        stack_name: "{{ stack_manager.stack_name }}"
+        stack_name: "{{stack_prefix }}-{{ stack_manager.stack_name }}"
         region: "{{ aws.region }}"
         state: absent
       when:
@@ -155,7 +138,7 @@
 
     - name: Check if Stack Manager SSM Stack Exists
       command: >
-        aws cloudformation describe-stacks --stack-name "{{ stack_manager.ssm_stack_name }}"
+        aws cloudformation describe-stacks --stack-name "{{stack_prefix }}-{{ stack_manager.ssm_stack_name }}"
              --query 'Stacks[].StackName' --region "{{ aws.region }}"
       ignore_errors: True
       register: stack_query
@@ -164,7 +147,7 @@
 
     - name: Report SSM Document Stack Problem if Any
       debug:
-        msg: Stack "{{ stack_manager.ssm_stack_name }}" does not exist or some other errors occured
+        msg: Stack "{{stack_prefix }}-{{ stack_manager.ssm_stack_name }}" does not exist or some other errors occured
       when:
         "stack_query.rc != 0"
       tags:
@@ -172,7 +155,7 @@
 
     - name: Delete AEM Stack Manager SSM Document Stack
       cloudformation:
-        stack_name: "{{ stack_manager.ssm_stack_name }}"
+        stack_name: "{{stack_prefix }}-{{ stack_manager.ssm_stack_name }}"
         region: "{{ aws.region }}"
         state: absent
       when:

@@ -38,7 +38,7 @@
     - name: >
         Create Snapshots Purge Cloud Native Solution Related Resources Using CloudFormation
       cloudformation:
-        stack_name: "{{ snapshots_purge.stack_name }}"
+        stack_name: "{{ stack_prefix }}-{{ snapshots_purge.stack_name }}"
         region: "{{ aws.region }}"
         state: present
         disable_rollback: false
@@ -47,6 +47,7 @@
           S3Bucket: "{{ stack_manager.s3_bucket }}"
           S3Prefix: " {{ stack_manager.s3_prefix }}"
           Version: "{{ stack_manager.version}}"
+          StackPrefix: "{{ stack_prefix }}"
           UseGlobalDefaults: "{{ snapshots_purge.UseGlobalDefaults }}"
           LiveSnapshotsPurgeSchedule: "{{ snapshots_purge.LiveSnapshotsPurgeSchedule}}"
           OfflineSnapshotsPurgeSchedule: "{{ snapshots_purge.OfflineSnapshotsPurgeSchedule }}"
@@ -60,7 +61,7 @@
 
     - name: Check if Snapshots Purge Stack Exists
       command: >
-        aws cloudformation describe-stacks --stack-name "{{ snapshots_purge.stack_name }}"
+        aws cloudformation describe-stacks --stack-name "{{ stack_prefix }}-{{ snapshots_purge.stack_name }}"
              --query 'Stacks[].StackName' --region "{{ aws.region }}"
       ignore_errors: True
       register: stack_query
@@ -69,7 +70,7 @@
 
     - name: Report Snapshots Purge Stack Problem if Any
       debug:
-        msg: Stack "{{ snapshots_purge.stack_name }}" does not exist or some other errors occured
+        msg: Stack "{{ stack_prefix }}-{{ snapshots_purge.stack_name }}" does not exist or some other errors occured
       when:
         "stack_query.rc != 0"
       tags:
@@ -77,7 +78,7 @@
 
     - name: Delete AEM Snapshots Purge Stack
       cloudformation:
-        stack_name: "{{  snapshots_purge.stack_name }}"
+        stack_name: "{{ stack_prefix }}-{{  snapshots_purge.stack_name }}"
         region: "{{ aws.region }}"
         state: absent
       when:
