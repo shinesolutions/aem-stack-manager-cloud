@@ -49,7 +49,7 @@ def instance_ids_by_tags(filters):
 
 
 def send_ssm_cmd(cmd_details):
-    logger.info('calling ssm commands')
+    logger.info(' calling ssm commands')
     return json.loads(json.dumps(ssm.send_command(**cmd_details), cls=MyEncoder))
 
 
@@ -395,6 +395,7 @@ def sns_message_processor(event, context):
     for record in event['Records']:
         message_text = record['Sns']['Message']
         logger.debug(message_text)
+        logger.info("Message ID: " + record['Sns']['MessageId'])
 
         # we could receive message from Stack Manager Topic, which trigger actions
         # and Status Topic, which tells us how the command ends
