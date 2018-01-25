@@ -224,6 +224,27 @@ def enable_crxde(message, ssm_common_params):
     params.update(details)
     return send_ssm_cmd(params)
 
+def disable_crxde(message, ssm_common_params):
+    target_filter = [
+        {
+            'Name': 'tag:StackPrefix',
+            'Values': [message['stack_prefix']]
+        }, {
+            'Name': 'instance-state-name',
+            'Values': ['running']
+        }, {
+            'Name': 'tag:Component',
+            'Values': [message['details']['component']]
+        }
+    ]
+    # boto3 ssm client does not accept multiple filter for Targets
+    details = {
+        'InstanceIds': instance_ids_by_tags(target_filter),
+        'Comment': 'disable crxde on selected AEM instances by component'
+    }
+    params = ssm_common_params.copy()
+    params.update(details)
+    return send_ssm_cmd(params)
 
 def run_adhoc_puppet(message, ssm_common_params):
     target_filter = [
@@ -365,6 +386,7 @@ method_mapper = {
     'import-package': import_package,
     'promote-author': promote_author,
     'enable-crxde': enable_crxde,
+    'disable-crxde': disable_crxde,
     'run-adhoc-puppet': run_adhoc_puppet
 }
 
