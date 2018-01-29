@@ -72,6 +72,12 @@ Parameters:
     Description: >-
       The name of the file containing the EnableCrxde SSM command.
 
+  DisableCrxdeIncludeFile:
+    Type: String
+    Default: AEM-DisableCrxde.yaml
+    Description: >-
+      The name of the file containing the DisableCrxde SSM command.
+
   RunAdhocPuppetIncludeFile:
     Type: String
     Default: AEM-RunAdhocPuppet.yaml
@@ -177,6 +183,16 @@ Resources:
           Name: 'AWS::Include'
           Parameters: !Sub '${S3BucketAndPrefix}/${EnableCrxdeIncludeFile}'
 
+  DisableCrxde:
+    Type: AWS::SSM::Document
+    Properties:
+      DocumentType: Command
+      Content:
+        Fn::Transform:
+          Name: 'AWS::Include'
+          Parameters: !Sub '${S3BucketAndPrefix}/${DisableCrxdeIncludeFile}'
+
+
   RunAdhocPuppet:
     Type: AWS::SSM::Document
     Properties:
@@ -226,6 +242,10 @@ Outputs:
   EnableCrxde:
     Description: Document name for Enable Crxde
     Value: !Ref EnableCrxde
+
+  DisableCrxde:
+    Description: Document name for Disable Crxde
+    Value: !Ref DisableCrxde
 
   RunAdhocPuppet:
     Description: Document name for Run Adhoc Puppet
