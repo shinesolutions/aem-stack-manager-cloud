@@ -272,7 +272,7 @@ def run_adhoc_puppet(message, ssm_common_params):
     return send_ssm_cmd(params)
 
 
-def put_state_in_dynamodb(table_name, command_id, environment, task, state, timestamp, **kwargs):
+def put_state_in_dynamodb(table_name, command_id, environment, task, state, timestamp, message_id, **kwargs):
 
     """
     schema:
@@ -313,6 +313,9 @@ def put_state_in_dynamodb(table_name, command_id, environment, task, state, time
         },
         'ttl': {
             'N': str(ttl)
+        },
+        'message_id': {
+            'S': message_id
         }
     }
 
@@ -416,8 +419,9 @@ def sns_message_processor(event, context):
     responses=[]
     for record in event['Records']:
         message_text = record['Sns']['Message']
+        message_id = record['Sns']['MessageId']
         logger.debug(message_text)
-        logger.info("Message ID: " + record['Sns']['MessageId'])
+        logger.info("Message ID: " + message_id)
 
         # we could receive message from Stack Manager Topic, which trigger actions
         # and Status Topic, which tells us how the command ends
@@ -456,6 +460,7 @@ def sns_message_processor(event, context):
                 message['task'],
                 respone['Command']['Status'],
                 respone['Command']['RequestedDateTime'],
+                message_id,
                 ExternalId=external_id
             )
 
