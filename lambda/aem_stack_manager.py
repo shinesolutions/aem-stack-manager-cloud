@@ -442,7 +442,7 @@ method_mapper = {
     'promote-author': promote_author,
     'enable-crxde': enable_crxde,
     'disable-crxde': disable_crxde,
-    'run-adhoc-puppet': run_adhoc_puppet
+    'run-adhoc-puppet': run_adhoc_puppet,
     'live-snapshot': live_snapshot
 }
 
