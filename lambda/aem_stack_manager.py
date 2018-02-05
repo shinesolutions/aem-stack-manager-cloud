@@ -150,6 +150,36 @@ def export_package(message, ssm_common_params):
     return send_ssm_cmd(params)
 
 
+def export_packages(message, ssm_common_params):
+    target_filter = [
+        {
+            'Name': 'tag:StackPrefix',
+            'Values': [message['stack_prefix']]
+        }, {
+            'Name': 'instance-state-name',
+            'Values': ['running']
+        }, {
+            'Name': 'tag:Component',
+            'Values': [message['details']['component']]
+        }
+    ]
+
+    encoded = json.dumps(message['details']['package_filter'])
+    logger.debug('encoded filter: {}'.format(encoded))
+    logger.debug('escaped filter: {}'.format(json.dumps(encoded)))
+
+    # boto3 ssm client does not accept multiple filter for Targets
+    details = {
+        'InstanceIds': instance_ids_by_tags(target_filter),
+        'Comment': 'exporting AEM pacakges as backup based on descriptor file',
+        'Parameters': {
+            'descriptorFile': [message['details']['descriptor_file']],
+        }
+    }
+    params = ssm_common_params.copy()
+    params.update(details)
+    return send_ssm_cmd(params)
+
 def import_package(message, ssm_common_params):
     target_filter = [
         {
@@ -271,6 +301,27 @@ def run_adhoc_puppet(message, ssm_common_params):
     params.update(details)
     return send_ssm_cmd(params)
 
+def live_snapshot(message, ssm_common_params):
+    target_filter = [
+        {
+            'Name': 'tag:StackPrefix',
+            'Values': [message['stack_prefix']]
+        }, {
+            'Name': 'instance-state-name',
+            'Values': ['running']
+        }, {
+            'Name': 'tag:Component',
+            'Values': [message['details']['component']]
+        }
+    ]
+    # boto3 ssm client does not accept multiple filter for Targets
+    details = {
+        'InstanceIds': instance_ids_by_tags(target_filter),
+        'Comment': 'take live snapshot on selected AEM instances by component'
+    }
+    params = ssm_common_params.copy()
+    params.update(details)
+    return send_ssm_cmd(params)
 
 def put_state_in_dynamodb(table_name, command_id, environment, task, state, timestamp, message_id, **kwargs):
 
@@ -386,11 +437,13 @@ method_mapper = {
     'deploy-artifact': deploy_artifact,
     'deploy-artifacts': deploy_artifacts,
     'export-package': export_package,
+    'export-packages': export_packages,
     'import-package': import_package,
     'promote-author': promote_author,
     'enable-crxde': enable_crxde,
     'disable-crxde': disable_crxde,
     'run-adhoc-puppet': run_adhoc_puppet
+    'live-snapshot': live_snapshot
 }
 
 
