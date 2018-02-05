@@ -30,6 +30,12 @@ Parameters:
     Description: >-
       The name of the file containing the ExportPackage SSM command.
 
+  ExportPackagesIncludeFile:
+    Type: String
+    Default: AEM-ExportPackages.yaml
+    Description: >-
+      The name of the file containing the ExportPackages SSM command.
+
   ImportPackageIncludeFile:
     Type: String
     Default: AEM-ImportPackage.yaml
@@ -84,6 +90,12 @@ Parameters:
     Description: >-
       The name of the file containing the RunAdhocPuppet SSM command.
 
+  LiveSnapshotIncludeFile:
+    Type: String
+    Default: AEM-LiveSnapshot.yaml
+    Description: >-
+      The name of the file containing the LiveSnapshot SSM command
+
 Resources:
   DeployArtifact:
     Type: AWS::SSM::Document
@@ -114,6 +126,16 @@ Resources:
           Name: 'AWS::Include'
           Parameters:
             Location: !Sub '${S3BucketAndPrefix}/${ExportPackageIncludeFile}'
+
+  ExportPackages:
+    Type: AWS::SSM::Document
+    Properties:
+      DocumentType: Command
+      Content:
+        Fn::Transform:
+          Name: 'AWS::Include'
+          Parameters:
+            Location: !Sub '${S3BucketAndPrefix}/${ExportPackagesIncludeFile}'
 
   ImportPackage:
     Type: AWS::SSM::Document
@@ -202,6 +224,15 @@ Resources:
           Name: 'AWS::Include'
           Parameters: !Sub '${S3BucketAndPrefix}/${RunAdhocPuppetIncludeFile}'
 
+  LiveSnapshot:
+    Type: AWS::SSM::Document
+    Properties:
+      DocumentType: Command
+      Content:
+        Fn::Transform:
+          Name: 'AWS::Include'
+          Parameters: !Sub '${S3BucketAndPrefix}/${LiveSnapshotIncludeFile}'
+
 Outputs:
   DeployArtifact:
     Description: Document name for Deploy Artifact
@@ -214,6 +245,10 @@ Outputs:
   ExportPackage:
     Description: Document name for Export Package
     Value: !Ref ExportPackage
+
+  ExportPackages:
+    Description: Document name for Export Package
+    Value: !Ref ExportPackages
 
   ImportPackage:
     Description: Document name for Import Package
@@ -250,3 +285,7 @@ Outputs:
   RunAdhocPuppet:
     Description: Document name for Run Adhoc Puppet
     Value: !Ref RunAdhocPuppet
+
+  LiveSnapshot:
+    Description: Document name for Live Snapshot
+    Value: !Ref LiveSnapshot
