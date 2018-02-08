@@ -5,16 +5,12 @@ version ?= 2.0.0
 ci: clean deps lint package
 
 clean:
-	rm -f ansible/playbooks/*.retry
 
 deps:
 	pip install -r requirements.txt
 
 lint:
 	shellcheck scripts/*.sh
-	for playbook in ansible/playbooks/*.yaml; do \
-		ansible-playbook -vvv $$playbook --syntax-check; \
-	done
 
 validate:
 	for template in cloudformation/*.yaml; do \
@@ -22,18 +18,6 @@ validate:
 		aws cloudformation validate-template --template-body "file://$$template"; \
 	done
 
-# stacks set management targets
-create-stack-manager-cloud:
-	./scripts/create-stack.sh aem-stack-manager-cloud $(config_path)
-
-delete-stack-manager-cloud:
-	./scripts/delete-stack.sh aem-stack-manager-cloud $(config_path)
-
-create-snapshots-purge-cloud:
-	./scripts/create-stack.sh aem-snapshots-purge $(config_path)
-
-delete-snapshots-purge-cloud:
-	./scripts/delete-stack.sh aem-snapshots-purge $(config_path)
 # utility targets
 
 package:

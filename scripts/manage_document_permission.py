@@ -91,3 +91,4 @@ if __name__ == '__main__':
         authorize_documents(documents, acct_ids)
     elif action_type == 'remove':
         deauthorize_documents(documents, acct_ids)
+

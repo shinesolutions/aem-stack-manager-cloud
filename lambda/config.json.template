@@ -1,7 +1,7 @@
 {
   "ec2_run_command": {
-    "cmd-output-bucket": "mb-aem-stack-builder",
-    "cmd-output-prefix": "SSMOutput",
+    "cmd-output-bucket": "aem-stack-builder",
+    "cmd-output-prefix": "AemStackManager/SSMOutput",
     "status-topic-arn": "topic",
     "ssm-service-role-arn": "role",
     "dynamodb-table": "AemStackManagerTable"
