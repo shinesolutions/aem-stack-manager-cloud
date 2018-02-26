@@ -15,7 +15,8 @@
     "offline-snapshot": "aem-stack-manager-ssm-OfflineSnapshot-1V7E8IWCJGMUR",
     "manage-service": "aem-stack-manager-ssm-ManageService-LWLXGQQ9TMJI",
     "import-package": "aem-stack-manager-ssm-ImportPackage-10LLGVZ6P9U7Z",
-    "deploy-artifact": "aem-stack-manager-ssm-DeployArtifact-1WCT1YW9QNUDQ"
+    "deploy-artifact": "aem-stack-manager-ssm-DeployArtifact-1WCT1YW9QNUDQ",
+    "flush-dispatcher-cache": "aem-stack-manager-ssm-FlushDispatcherCache-1WCT1YW9QNUDQ"
   },
   "offline_snapshot": {
     "min-publish-instances": 2,
