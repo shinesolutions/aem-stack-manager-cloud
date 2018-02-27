@@ -11,7 +11,7 @@ parameters:
       - start
       - stop
 
-  aem_id:
+  aemid:
     description: >-
       (Required) Instance description
     type: String
@@ -46,7 +46,7 @@ mainSteps:
     inputs:
       runCommand:
         - '. /etc/profile'
-        - '/sbin/service aem-{{ aem_id }} {{ action }}'
+        - '/sbin/service aem-{{ aemid }} {{ action }}'
         - '[ {{action}} = "start" ] || /opt/shinesolutions/aem-tools/crx-process-quited.sh {{repeats}}  {{interval}}'
       timeoutSeconds: '{{ executionTimeout }}'
       workingDirectory: /tmp
