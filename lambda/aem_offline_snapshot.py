@@ -484,6 +484,7 @@ def compact_remaining_publish_instances(context):
                 'DocumentName': context['TaskDocumentMapping']['manage-service'],
                 'Comment': 'Stop AEM service on remaining publish instances',
                 'Parameters': {
+                    'aemid': ['publish'],
                     'action': ['stop']
                 }
             }
@@ -540,6 +541,7 @@ def compact_remaining_publish_instances(context):
                 'DocumentName': context['TaskDocumentMapping']['manage-service'],
                 'Comment': 'Start AEM Service on all the publish instances',
                 'Parameters': {
+                    'aemid': ['publish'],
                     'action': ['start']
                 }
             }
@@ -688,6 +690,7 @@ def sns_message_processor(event, context):
                     'DocumentName': task_document_mapping['manage-service'],
                     'Comment': 'Kick start offline backup with stopping AEM service on Author standby instance',
                     'Parameters': {
+                        'aemid': ['author'],
                         'action': ['stop']
                     }
                 }
@@ -751,10 +754,11 @@ def sns_message_processor(event, context):
                 ssm_params = ssm_common_params.copy()
                 ssm_params.update(
                     {
-                        'InstanceIds': [author_primary_id, publish_id],
+                        'InstanceIds': [author_primary_id],
                         'DocumentName': task_document_mapping['manage-service'],
-                        'Comment': 'Stop AEM service on Author primary and Publish instances',
+                        'Comment': 'Stop AEM service on Author primary instances',
                         'Parameters': {
+                            'aemid': ['author'],
                             'action': ['stop']
                         }
                     }
@@ -776,6 +780,34 @@ def sns_message_processor(event, context):
                 responses.append(response)
 
             elif state == 'STOP_AUTHOR_PRIMARY':
+                ssm_params = ssm_common_params.copy()
+                ssm_params.update(
+                    {
+                        'InstanceIds': [publish_id],
+                        'DocumentName': task_document_mapping['manage-service'],
+                        'Comment': 'Stop AEM service on Publish instances',
+                        'Parameters': {
+                            'aemid': ['publish'],
+                            'action': ['stop']
+                        }
+                    }
+                )
+
+                response = send_ssm_cmd(ssm_params)
+                put_state_in_dynamodb(
+                    dynamodb_table,
+                    response['Command']['CommandId'],
+                    stack_prefix,
+                    task,
+                    'STOP_PUBLISH',
+                    message['eventTime'],
+                    ExternalId=external_id,
+                    InstanceInfo=instance_info,
+                    LastCommand=cmd_id
+                )
+                responses.append(response)
+
+            elif state == 'STOP_PUBLISH':
                 ssm_params = ssm_common_params.copy()
                 if task == 'offline-snapshot':
                     ssm_params.update(
@@ -859,6 +891,7 @@ def sns_message_processor(event, context):
                         'DocumentName': task_document_mapping['manage-service'],
                         'Comment': 'Start AEM service on Author primary instance',
                         'Parameters': {
+                            'aemid': ['author'],
                             'action': ['start']
                         }
                     }
@@ -884,10 +917,11 @@ def sns_message_processor(event, context):
                 ssm_params = ssm_common_params.copy()
                 ssm_params.update(
                     {
-                        'InstanceIds': [author_standby_id, publish_id],
+                        'InstanceIds': [author_standby_id],
                         'DocumentName': task_document_mapping['manage-service'],
-                        'Comment': 'Start AEM service on Author standby and Publish instances',
+                        'Comment': 'Start AEM service on Author standby instances',
                         'Parameters': {
+                            'aemid': ['author'],
                             'action': ['start']
                         }
                     }
@@ -909,6 +943,34 @@ def sns_message_processor(event, context):
                 responses.append(response)
 
             elif state == 'START_AUTHOR_STANDBY':
+                ssm_params = ssm_common_params.copy()
+                ssm_params.update(
+                    {
+                        'InstanceIds': [publish_id],
+                        'DocumentName': task_document_mapping['manage-service'],
+                        'Comment': 'Stop AEM service on Publish instances',
+                        'Parameters': {
+                            'aemid': ['publish'],
+                            'action': ['start']
+                        }
+                    }
+                )
+
+                response = send_ssm_cmd(ssm_params)
+                put_state_in_dynamodb(
+                    dynamodb_table,
+                    response['Command']['CommandId'],
+                    stack_prefix,
+                    task,
+                    'START_PUBLISH',
+                    message['eventTime'],
+                    ExternalId=external_id,
+                    InstanceInfo=instance_info,
+                    LastCommand=cmd_id
+                )
+                responses.append(response)
+
+            elif state == 'START_PUBLISH':
 
                 # this is the success notification message
                 if task == 'offline-snapshot':
