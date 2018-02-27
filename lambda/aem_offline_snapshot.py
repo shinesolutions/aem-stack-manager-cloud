@@ -480,7 +480,7 @@ def compact_remaining_publish_instances(context):
                 'DocumentName': context['TaskDocumentMapping']['manage-service'],
                 'Comment': 'Stop AEM service on remaining publish instances',
                 'Parameters': {
-                    'aem': ['publish'],
+                    'aem_id': ['publish'],
                     'action': ['stop']
                 }
             }
@@ -535,7 +535,7 @@ def compact_remaining_publish_instances(context):
                 'DocumentName': context['TaskDocumentMapping']['manage-service'],
                 'Comment': 'Start AEM Service on all the publish instances',
                 'Parameters': {
-                    'aem': ['publish'],
+                    'aem_id': ['publish'],
                     'action': ['start']
                 }
             }
@@ -681,7 +681,7 @@ def sns_message_processor(event, context):
                     'DocumentName': task_document_mapping['manage-service'],
                     'Comment': 'Kick start offline backup with stopping AEM service on Author standby instance',
                     'Parameters': {
-                        'aem': ['author'],
+                        'aem_id': ['author'],
                         'action': ['stop']
                     }
                 }
@@ -748,7 +748,7 @@ def sns_message_processor(event, context):
                         'DocumentName': task_document_mapping['manage-service'],
                         'Comment': 'Stop AEM service on Author primary instances',
                         'Parameters': {
-                            'aem': ['author'],
+                            'aem_id': ['author'],
                             'action': ['stop']
                         }
                     }
@@ -776,7 +776,7 @@ def sns_message_processor(event, context):
                         'DocumentName': task_document_mapping['manage-service'],
                         'Comment': 'Stop AEM service on Publish instances',
                         'Parameters': {
-                            'aem': ['publish'],
+                            'aem_id': ['publish'],
                             'action': ['stop']
                         }
                     }
@@ -877,7 +877,7 @@ def sns_message_processor(event, context):
                         'DocumentName': task_document_mapping['manage-service'],
                         'Comment': 'Start AEM service on Author primary instance',
                         'Parameters': {
-                            'aem': ['author'],
+                            'aem_id': ['author'],
                             'action': ['start']
                         }
                     }
@@ -906,7 +906,7 @@ def sns_message_processor(event, context):
                         'DocumentName': task_document_mapping['manage-service'],
                         'Comment': 'Start AEM service on Author standby instances',
                         'Parameters': {
-                            'aem': ['author'],
+                            'aem_id': ['author'],
                             'action': ['start']
                         }
                     }
@@ -934,7 +934,7 @@ def sns_message_processor(event, context):
                         'DocumentName': task_document_mapping['manage-service'],
                         'Comment': 'Stop AEM service on Publish instances',
                         'Parameters': {
-                            'aem': ['publish'],
+                            'aem_id': ['publish'],
                             'action': ['start']
                         }
                     }
