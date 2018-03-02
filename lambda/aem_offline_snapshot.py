@@ -801,6 +801,7 @@ def sns_message_processor(event, context):
                     task,
                     'STOP_PUBLISH',
                     message['eventTime'],
+                    message_id,
                     ExternalId=external_id,
                     InstanceInfo=instance_info,
                     LastCommand=cmd_id
@@ -964,6 +965,7 @@ def sns_message_processor(event, context):
                     task,
                     'START_PUBLISH',
                     message['eventTime'],
+                    message_id,
                     ExternalId=external_id,
                     InstanceInfo=instance_info,
                     LastCommand=cmd_id
