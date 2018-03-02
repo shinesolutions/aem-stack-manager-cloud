@@ -293,9 +293,6 @@ def flush_dispatcher_cache(message, ssm_common_params):
     details = {
         'InstanceIds': instance_ids_by_tags(target_filter),
         'Comment': 'flush dispatcher cache on selected AEM Dispatcher instances by component'
-        'Parameters': {
-            'docroot': [message['details']['docroot']]
-        }
     }
     params = ssm_common_params.copy()
     params.update(details)
