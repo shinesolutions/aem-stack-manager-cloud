@@ -1,10 +1,9 @@
-version ?= 1.0.0
-
-# development targets
+version ?= 1.2.0
 
 ci: clean deps lint package
 
 clean:
+	rm -rf stage
 
 deps:
 	pip install -r requirements.txt
@@ -18,12 +17,10 @@ validate:
 		aws cloudformation validate-template --template-body "file://$$template"; \
 	done
 
-# utility targets
-
 package:
-	rm -rf stage
 	mkdir -p stage
-	tar \
+	zip \
+	    --recurse-paths stage/aem-stack-manager-cloud-$(version).zip ./ \
 	    --exclude='.git*' \
 	    --exclude='.librarian*' \
 	    --exclude='.tmp*' \
@@ -32,9 +29,6 @@ package:
 	    --exclude='.DS_Store*' \
 	    --exclude='logs*' \
 	    --exclude='*.retry' \
-	    --exclude='*.iml' \
-	    -cvf \
-	    stage/aem-stack-manager-cloud-$(version).tar ./
-	gzip stage/aem-stack-manager-cloud-$(version).tar
+	    --exclude='*.iml'
 
 .PHONY:  ci clean deps lint validate package

@@ -11,6 +11,14 @@ parameters:
       - start
       - stop
 
+  aemid:
+    description: >-
+      (Required) Instance description
+    type: String
+    allowedValues:
+      - author
+      - publish
+
   repeats:
     description: >-
       (Optional) How many times this command to retry
@@ -38,7 +46,7 @@ mainSteps:
     inputs:
       runCommand:
         - '. /etc/profile'
-        - '/sbin/service aem-aem {{ action }}'
+        - '/sbin/service aem-{{ aemid }} {{ action }}'
         - '[ {{action}} = "start" ] || /opt/shinesolutions/aem-tools/crx-process-quited.sh {{repeats}}  {{interval}}'
       timeoutSeconds: '{{ executionTimeout }}'
       workingDirectory: /tmp
