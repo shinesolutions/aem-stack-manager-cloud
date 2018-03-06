@@ -7,6 +7,7 @@
 * Add missing message_id parameter from offline snapshot AEM publish start/stop
 * Add aemid parameter in order to handle multi AEM instances on the same server
 * Add new command flush-dispatcher-cache
+* Update AEM Stack Manager Lambda function to improve flexibility 
 
 ### 1.0.0
 * Initial version
