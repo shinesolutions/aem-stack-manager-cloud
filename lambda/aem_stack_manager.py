@@ -86,7 +86,6 @@ def execute_task(message, ssm_common_params):
 
     params = ssm_common_params.copy()
     params.update(details)
-    logger.info(params)
     return send_ssm_cmd(params)
 
 def put_state_in_dynamodb(table_name, command_id, environment, task, state, timestamp, message_id, **kwargs):
