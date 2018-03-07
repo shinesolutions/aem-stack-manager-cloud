@@ -82,7 +82,6 @@ def execute_task(message, ssm_common_params):
             'InstanceIds': instance_ids_by_tags(target_filter),
             'Comment': message['details']['comment'],
         }
-        details.update(parameters)
 
     params = ssm_common_params.copy()
     params.update(details)
