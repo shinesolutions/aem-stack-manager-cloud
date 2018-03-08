@@ -164,10 +164,6 @@ def export_packages(message, ssm_common_params):
         }
     ]
 
-    encoded = json.dumps(message['details']['package_filter'])
-    logger.debug('encoded filter: {}'.format(encoded))
-    logger.debug('escaped filter: {}'.format(json.dumps(encoded)))
-
     # boto3 ssm client does not accept multiple filter for Targets
     details = {
         'InstanceIds': instance_ids_by_tags(target_filter),
