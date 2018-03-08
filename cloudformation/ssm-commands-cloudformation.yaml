@@ -96,6 +96,12 @@ Parameters:
     Description: >-
       The name of the file containing the LiveSnapshot SSM command
 
+  FlushDispatcherCacheIncludeFile:
+    Type: String
+    Default: AEM-FlushDispatcherCache.yaml
+    Description: >-
+      The name of the file containing the FlushDispatcherCache SSM command
+
 Resources:
   DeployArtifact:
     Type: AWS::SSM::Document
@@ -233,6 +239,15 @@ Resources:
           Name: 'AWS::Include'
           Parameters: !Sub '${S3BucketAndPrefix}/${LiveSnapshotIncludeFile}'
 
+  FlushDispatcherCache:
+    Type: AWS::SSM::Document
+    Properties:
+      DocumentType: Command
+      Content:
+        Fn::Transform:
+          Name: 'AWS::Include'
+          Parameters: !Sub '${S3BucketAndPrefix}/${FlushDispatcherCacheIncludeFile}'
+
 Outputs:
   DeployArtifact:
     Description: Document name for Deploy Artifact
@@ -289,3 +304,7 @@ Outputs:
   LiveSnapshot:
     Description: Document name for Live Snapshot
     Value: !Ref LiveSnapshot
+
+  FlushDispatcherCache:
+    Description: Document name for FlushDispatcherCache
+    Value: !Ref FlushDispatcherCache
