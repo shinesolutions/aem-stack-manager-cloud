@@ -52,8 +52,188 @@ def send_ssm_cmd(cmd_details):
     logger.info(' calling ssm commands')
     return json.loads(json.dumps(ssm.send_command(**cmd_details), cls=MyEncoder))
 
+<<<<<<< HEAD
 def execute_task(message, ssm_common_params):
     component = message['details']['component']
+=======
+
+def deploy_artifact(message, ssm_common_params):
+    target_filter = [
+        {
+            'Name': 'tag:StackPrefix',
+            'Values': [message['stack_prefix']]
+        }, {
+            'Name': 'instance-state-name',
+            'Values': ['running']
+        }, {
+            'Name': 'tag:Component',
+            'Values': [message['details']['component']]
+        }
+    ]
+    # boto3 ssm client does not accept multiple filter for Targets
+    details = {
+        'InstanceIds': instance_ids_by_tags(target_filter),
+        'Comment': 'deploy an AEM artifact',
+        'Parameters': {
+            'source': [message['details']['source']],
+            'group': [message['details']['group']],
+            'name': [message['details']['name']],
+            'version': [message['details']['version']],
+            'replicate': [message['details']['replicate']],
+            'activate': [message['details']['activate']],
+            'force': [message['details']['force']]
+
+        }
+    }
+    params = ssm_common_params.copy()
+    params.update(details)
+    return send_ssm_cmd(params)
+
+
+def deploy_artifacts(message, ssm_common_params):
+    target_filter = [
+        {
+            'Name': 'tag:StackPrefix',
+            'Values': [message['stack_prefix']]
+        }, {
+            'Name': 'instance-state-name',
+            'Values': ['running']
+        }, {
+            'Name': 'tag:Component',
+            'Values': ['author-primary',
+                       'author-standby',
+                       'publish',
+                       'author-dispatcher',
+                       'publish-dispatcher'
+                       ]
+        }
+    ]
+    # boto3 ssm client does not accept multiple filter for Targets
+    details = {
+        'InstanceIds': instance_ids_by_tags(target_filter),
+        'Comment': 'deploying artifacts based on a descriptor file',
+        'Parameters': {
+            'descriptorFile': [message['details']['descriptor_file']]
+        }
+    }
+    params = ssm_common_params.copy()
+    params.update(details)
+    return send_ssm_cmd(params)
+
+
+def export_package(message, ssm_common_params):
+    target_filter = [
+        {
+            'Name': 'tag:StackPrefix',
+            'Values': [message['stack_prefix']]
+        }, {
+            'Name': 'instance-state-name',
+            'Values': ['running']
+        }, {
+            'Name': 'tag:Component',
+            'Values': [message['details']['component']]
+        }
+    ]
+
+    encoded = json.dumps(message['details']['package_filter'])
+    logger.debug('encoded filter: {}'.format(encoded))
+    logger.debug('escaped filter: {}'.format(json.dumps(encoded)))
+
+    # boto3 ssm client does not accept multiple filter for Targets
+    details = {
+        'InstanceIds': instance_ids_by_tags(target_filter),
+        'Comment': 'exporting AEM pacakges as backup based on package group, name and filter',
+        'Parameters': {
+            'packageGroup': [message['details']['package_group']],
+            'packageName': [message['details']['package_name']],
+            'packageFilter': [json.dumps(encoded)]
+        }
+    }
+    params = ssm_common_params.copy()
+    params.update(details)
+    return send_ssm_cmd(params)
+
+
+def export_packages(message, ssm_common_params):
+    target_filter = [
+        {
+            'Name': 'tag:StackPrefix',
+            'Values': [message['stack_prefix']]
+        }, {
+            'Name': 'instance-state-name',
+            'Values': ['running']
+        }, {
+            'Name': 'tag:Component',
+            'Values': [message['details']['component']]
+        }
+    ]
+
+    # boto3 ssm client does not accept multiple filter for Targets
+    details = {
+        'InstanceIds': instance_ids_by_tags(target_filter),
+        'Comment': 'exporting AEM pacakges as backup based on descriptor file',
+        'Parameters': {
+            'descriptorFile': [message['details']['descriptor_file']],
+        }
+    }
+    params = ssm_common_params.copy()
+    params.update(details)
+    return send_ssm_cmd(params)
+
+def import_package(message, ssm_common_params):
+    target_filter = [
+        {
+            'Name': 'tag:StackPrefix',
+            'Values': [message['stack_prefix']]
+        }, {
+            'Name': 'instance-state-name',
+            'Values': ['running']
+        }, {
+            'Name': 'tag:Component',
+            'Values': [message['details']['component']]
+        }
+    ]
+    # boto3 ssm client does not accept multiple filter for Targets
+    details = {
+        'InstanceIds': instance_ids_by_tags(target_filter),
+        'Comment': 'import AEM backed up pacakges for a stack based on group, name and timestamp',
+        'Parameters': {
+            'sourceStackPrefix': [message['details']['source_stack_prefix']],
+            'packageGroup': [message['details']['package_group']],
+            'packageName': [message['details']['package_name']],
+            'packageDatestamp': [message['details']['package_datestamp']]
+        }
+    }
+    params = ssm_common_params.copy()
+    params.update(details)
+    return send_ssm_cmd(params)
+
+
+def promote_author(message, ssm_common_params):
+    target_filter = [
+        {
+            'Name': 'tag:StackPrefix',
+            'Values': [message['stack_prefix']]
+        }, {
+            'Name': 'instance-state-name',
+            'Values': ['running']
+        }, {
+            'Name': 'tag:Component',
+            'Values': ['author-standby']
+        }
+    ]
+    # boto3 ssm client does not accept multiple filter for Targets
+    details = {
+        'InstanceIds': instance_ids_by_tags(target_filter),
+        'Comment': 'promote standby author instance to be the primary'
+    }
+    params = ssm_common_params.copy()
+    params.update(details)
+    return send_ssm_cmd(params)
+
+
+def enable_crxde(message, ssm_common_params):
+>>>>>>> 61605c6501ff3a9d2b35bec61b3bf8e0d1c904c1
     target_filter = [
         {
             'Name': 'tag:StackPrefix',
