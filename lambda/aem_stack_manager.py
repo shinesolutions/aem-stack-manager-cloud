@@ -52,6 +52,7 @@ def send_ssm_cmd(cmd_details):
     logger.info(' calling ssm commands')
     return json.loads(json.dumps(ssm.send_command(**cmd_details), cls=MyEncoder))
 
+
 def execute_task(message, ssm_common_params):
     component = message['details']['component']
     target_filter = [
@@ -82,11 +83,10 @@ def execute_task(message, ssm_common_params):
             'InstanceIds': instance_ids_by_tags(target_filter),
             'Comment': message['details']['comment'],
         }
-        details.update(parameters)
 
     params = ssm_common_params.copy()
     params.update(details)
-    logger.info(params)
+
     return send_ssm_cmd(params)
 
 def put_state_in_dynamodb(table_name, command_id, environment, task, state, timestamp, message_id, **kwargs):
