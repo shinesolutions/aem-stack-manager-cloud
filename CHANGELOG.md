@@ -1,3 +1,6 @@
+### 1.2.2
+*
+
 ### 1.2.1
 * Update AEM Stack Manager Lambda function to improve flexibility 
 
