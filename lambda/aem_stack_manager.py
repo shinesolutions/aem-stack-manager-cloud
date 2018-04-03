@@ -10,6 +10,7 @@ import boto3
 import logging
 import json
 import datetime
+import re
 
 
 __author__ = 'Andy Wang (andy.wang@shinesolutions.com)'
@@ -224,12 +225,23 @@ def sns_message_processor(event, context):
     for record in event['Records']:
         message_text = record['Sns']['Message']
         message_id = record['Sns']['MessageId']
-        logger.debug(message_text)
+
         logger.info("Message ID: " + message_id)
 
         # we could receive message from Stack Manager Topic, which trigger actions
         # and Status Topic, which tells us how the command ends
-        message = json.loads(message_text.replace('\'', '"'))
+        if 'status' not in message_text:
+            # Escape packageFilter if packageFilter exist
+            if message_text.find('packageFilter') is not -1:
+                # Escape packageFilter
+                message_text = re.sub('\[\"\[', '["\\\"[', message_text)
+                message_text = re.sub('\]\"\]', ']\\\""]', message_text)
+                # RegEx to find the packageFilter for export-backup Job and replace all single quotes with escaped double quotes
+                package_filter_escape_double_quotes = re.sub(r'\'', r'\\\\\\\\\\"', re.search(r'(?<=\"\\\"\[{).*(?=}\]\\\"\")', message_text).group(0))
+                message_text = re.sub(r'(?<=\"\\\"\[{).*(?=}\]\\\"\")', package_filter_escape_double_quotes, message_text)
+
+        message_text = message_text.replace('\'', '"')
+        message = json.loads(message_text)
 
         if 'task' in message and message['task'] is not None:
             stack_prefix = message['stack_prefix']
