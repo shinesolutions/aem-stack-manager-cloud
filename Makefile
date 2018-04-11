@@ -10,6 +10,8 @@ deps:
 
 lint:
 	shellcheck scripts/*.sh
+	# TODO: re-enable when all Pylint errors are cleaned up
+	# pylint lambda/*.py
 
 package:
 	mkdir -p stage
