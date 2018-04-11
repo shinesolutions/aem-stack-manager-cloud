@@ -11,12 +11,6 @@ deps:
 lint:
 	shellcheck scripts/*.sh
 
-validate:
-	for template in cloudformation/*.yaml; do \
-		echo "checking template $${template} ...."; \
-		aws cloudformation validate-template --template-body "file://$$template"; \
-	done
-
 package:
 	mkdir -p stage
 	zip \
@@ -31,4 +25,4 @@ package:
 	    --exclude='*.retry' \
 	    --exclude='*.iml'
 
-.PHONY:  ci clean deps lint validate package
+.PHONY:  ci clean deps lint package
