@@ -234,6 +234,7 @@ def sns_message_processor(event, context):
             # Escape packageFilter if packageFilter exist
             if message_text.find('packageFilter') is not -1:
                 # Escape packageFilter
+                message_text = re.sub('\\\\', '\\\\\\\\\\\\\\\\', message_text)
                 message_text = re.sub('\[\"\[', '["\\\"[', message_text)
                 message_text = re.sub('\]\"\]', ']\\\""]', message_text)
                 # RegEx to find the packageFilter for export-backup Job and replace all single quotes with escaped double quotes
