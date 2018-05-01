@@ -1,5 +1,5 @@
 ### 1.2.3
-*
+* Handle existing escaped backslashes in package filter
 
 ### 1.2.2
 * Export backup package filter no longer needs to be escaped
