@@ -1,3 +1,6 @@
+### 1.2.4
+*
+
 ### 1.2.3
 * Handle existing escaped backslashes in package filter
 
