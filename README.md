@@ -9,8 +9,8 @@ AEM Stack Manager provides the ability to do the following:
  * deploy-artifacts: deploy AEM packages based on a descriptor file
  * export-package: exporting an AEM package based on a set of filter rules
  * import-package: import a previously exported package
- * offline-snapshot: take an EBS snapshot of AEM repository volume after stopping AEM service
- * offline-compaction-snapshot: take an EBS snapshot after stopping AEM service and compacting the repository
+ * offline-snapshot-full-set: take an EBS snapshot of AEM repository volume after stopping AEM service
+ * offline-compaction-snapshot-full-set: take an EBS snapshot after stopping AEM service and compacting the repository
  * promote-author: promote a standby Author instance to be the primary.
  * enable-crxde: enable crxde on selected instances.
  * run-adhoc-puppet: run adhoc puppet code provided in a tar ball.
@@ -68,6 +68,6 @@ Under *scripts*, `generate.sh` is used to create the CloudFormation Template for
 The EC2 instances are assumed to have EC2 System Manager Agent installed and properly configured. Please refer to [amazon_ssm_agent](https://github.com/shinesolutions/amazon_ssm_agent) for a simple, easy-to-use Puppet module that supports using a proxy.
 
 ## Going Forward
-Lambda function is stateless, while two of the tasks, `offline-snapshot`, `offline-compaction-snapshot` requires a few things happen in the right order and share state information between the steps. Using a combination of Lambda and DynamoDB can work, but is a less optimal choice due to *AWS Step Function* is not available in Sydney region when this work started.
+Lambda function is stateless, while two of the tasks, `offline-snapshot-full-set`, `offline-compaction-snapshot-full-set` requires a few things happen in the right order and share state information between the steps. Using a combination of Lambda and DynamoDB can work, but is a less optimal choice due to *AWS Step Function* is not available in Sydney region when this work started.
 
 A Step Function implementation is planed and this cloud implementation will switch to that once it is available in Sydney region.

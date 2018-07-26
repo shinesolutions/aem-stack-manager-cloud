@@ -300,7 +300,7 @@ def put_state_in_dynamodb(table_name, command_id, environment, task, state, time
          has ran yet
     attr:
       environment: S usually stack_prefix
-      task: S the task this command is for, offline-snapshot, offline-compaction-snapshot, etc
+      task: S the task this command is for, offline-snapshot-full-set, offline-compaction-snapshot-full-set, etc
       state: S STOP_AUTHOR_STANDBY, STOP_AUTHOR_PRIMARY, .... Success, Failed
       timestamp: S, example: 2017-05-16T01:57:05.9Z
       ttl: one day
@@ -512,7 +512,7 @@ def compact_remaining_publish_instances(context):
         ssm_params.update(
             {
                 'InstanceIds': context['PublishIds'],
-                'DocumentName': context['TaskDocumentMapping']['offline-compaction'],
+                'DocumentName': context['TaskDocumentMapping']['offline-compaction-snapshot-full-set'],
                 'Comment': 'Run offline compaction on all remaining publish instances'
             }
         )
@@ -638,8 +638,8 @@ def sns_message_processor(event, context):
 
         # message that start-offline snapshot has a task key
         response = None
-        if 'task' in message and (message['task'] == 'offline-snapshot' or
-                                  message['task'] == 'offline-compaction-snapshot'):
+        if 'task' in message and (message['task'] == 'offline-snapshot-full-set' or
+                                  message['task'] == 'offline-compaction-snapshot-full-set'):
 
             stack_prefix = message['stack_prefix']
             task = message['task']
@@ -810,11 +810,11 @@ def sns_message_processor(event, context):
 
             elif state == 'STOP_PUBLISH':
                 ssm_params = ssm_common_params.copy()
-                if task == 'offline-snapshot':
+                if task == 'offline-snapshot-full-set':
                     ssm_params.update(
                         {
                             'InstanceIds': [author_primary_id, author_standby_id, publish_id],
-                            'DocumentName': task_document_mapping['offline-snapshot'],
+                            'DocumentName': task_document_mapping['offline-snapshot-full-set'],
                             'Comment': 'Run offline snapshot on Author and a select publish instances'
                         }
                     )
@@ -834,11 +834,11 @@ def sns_message_processor(event, context):
                     )
 
                     responses.append(response)
-                elif task == 'offline-compaction-snapshot':
+                elif task == 'offline-compaction-snapshot-full-set':
                     ssm_params.update(
                         {
                             'InstanceIds': [author_primary_id, author_standby_id, publish_id],
-                            'DocumentName': task_document_mapping['offline-compaction'],
+                            'DocumentName': task_document_mapping['offline-compaction-snapshot-full-set'],
                             'Comment': 'Run offline compaction on Author and a selected Publish instances'
                         }
                     )
@@ -864,7 +864,7 @@ def sns_message_processor(event, context):
                 ssm_params.update(
                     {
                         'InstanceIds': [author_primary_id, author_standby_id, publish_id],
-                        'DocumentName': task_document_mapping['offline-snapshot'],
+                        'DocumentName': task_document_mapping['offline-snapshot-full-set'],
                         'Comment': 'Run offline EBS snapshot on Author and a selected Publish instances'
                     }
                 )
@@ -975,7 +975,7 @@ def sns_message_processor(event, context):
             elif state == 'START_PUBLISH':
 
                 # this is the success notification message
-                if task == 'offline-snapshot':
+                if task == 'offline-snapshot-full-set':
                     update_state_in_dynamodb(dynamodb_table, cmd_id, 'Success', message['eventTime'])
                     print('Offline backup for environment {} finished successfully'.format(stack_prefix))
 
@@ -991,7 +991,7 @@ def sns_message_processor(event, context):
                     }
                     responses.append(response)
 
-                elif task == 'offline-compaction-snapshot':
+                elif task == 'offline-compaction-snapshot-full-set':
                     # move author-dispatcher instances out of standby
                     manage_autoscaling_standby(stack_prefix, 'exit', byComponent='author-dispatcher')
                     # move publish-dispatcher instance out of standby
