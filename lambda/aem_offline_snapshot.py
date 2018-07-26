@@ -512,7 +512,7 @@ def compact_remaining_publish_instances(context):
         ssm_params.update(
             {
                 'InstanceIds': context['PublishIds'],
-                'DocumentName': context['TaskDocumentMapping']['offline-compaction'],
+                'DocumentName': context['TaskDocumentMapping']['offline-compaction-snapshot-full-set'],
                 'Comment': 'Run offline compaction on all remaining publish instances'
             }
         )
@@ -838,7 +838,7 @@ def sns_message_processor(event, context):
                     ssm_params.update(
                         {
                             'InstanceIds': [author_primary_id, author_standby_id, publish_id],
-                            'DocumentName': task_document_mapping['offline-compaction'],
+                            'DocumentName': task_document_mapping['offline-compaction-snapshot-full-set'],
                             'Comment': 'Run offline compaction on Author and a selected Publish instances'
                         }
                     )
