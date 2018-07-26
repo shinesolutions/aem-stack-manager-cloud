@@ -1,4 +1,4 @@
-### 1.2.4
+### 1.3.0
 * Rename offline-snapshot, offline-compaction-snapshot with full-set suffix
 * Remove unused scripts/manage_document_permission.py
 
