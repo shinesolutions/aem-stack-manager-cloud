@@ -1,5 +1,6 @@
 ### 1.2.4
-*
+* Rename offline-snapshot, offline-compaction-snapshot with full-set suffix
+* Remove unused scripts/manage_document_permission.py
 
 ### 1.2.3
 * Handle existing escaped backslashes in package filter
@@ -8,7 +9,7 @@
 * Export backup package filter no longer needs to be escaped
 
 ### 1.2.1
-* Update AEM Stack Manager Lambda function to improve flexibility 
+* Update AEM Stack Manager Lambda function to improve flexibility
 
 ### 1.2.0
 * Add new command flush-dispatcher-cache
