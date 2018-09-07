@@ -1,8 +1,8 @@
 # -*- coding: utf8 -*-
 
 """
-Lambda function to manage AEM stack offline backups. It uses a SNS topic to help
-orchestrate sequence of steps
+Lambda function to manage AEM stack offline backups.
+It uses a SNS topic to help orchestrate sequence of steps
 """
 
 import os
@@ -52,9 +52,18 @@ def instance_ids_by_tags(filters):
 
 
 def send_ssm_cmd(cmd_details):
-    print('calling ssm commands')
-    return json.loads(json.dumps(ssm.send_command(**cmd_details),
-                      cls=MyEncoder))
+    ssm_document = cmd_details['DocumentName']
+    print('Start calling SSM Document {} ...'.format(ssm_document))
+    response = json.loads(
+        json.dumps(
+            ssm.send_command(
+                **cmd_details
+                ),
+            cls=MyEncoder
+            )
+        )
+    print('Finished calling SSM Document {}.'.format(ssm_document))
+    return response
 
 
 def get_author_primary_ids(stack_prefix):
@@ -110,9 +119,10 @@ def get_publish_ids(stack_prefix):
 
 def manage_autoscaling_standby(stack_prefix, action, **kwargs):
     """
-    put instances in an autoscaling group into or bring them out of standby mode
-    one of byComponent or byInstanceIds must be give and not both. If byInstanceIds
-    are given, it is assumed that all the instances are in the same group
+    put instances in an autoscaling group into or bring them out of
+    standby mode one of byComponent or byInstanceIds must be give and not both.
+    If byInstanceIds are given, it is assumed that all the instances
+    are in the same group
     """
     if 'byComponent' in kwargs:
             filters = [{
@@ -160,30 +170,38 @@ def manage_autoscaling_standby(stack_prefix, action, **kwargs):
         AutoScalingGroupNames=[asg_name]
     )
     asg_min_size = asg_dcrb['AutoScalingGroups'][0]['MinSize']
-    asg_max_sie = asg_dcrb['AutoScalingGroups'][0]['MaxSize']
+    asg_max_size = asg_dcrb['AutoScalingGroups'][0]['MaxSize']
 
     # manage the instances standby mode
     if action == 'enter':
+        print('[{}] Start updating ASG {} to 0 instances ...'.format(stack_prefix, asg_name))
         autoscaling.update_auto_scaling_group(
             AutoScalingGroupName=asg_name,
             MinSize=max(asg_min_size - len(instance_ids), 0)
         )
+        print('[{}] Finish updating ASG {} to 0 instances.'.format(stack_prefix, asg_name))
 
+        print('[{}] Start entering instance {} into standby in ASG {} ...'.format(stack_prefix, instance_ids, asg_name))
         autoscaling.enter_standby(
             InstanceIds=instance_ids,
             AutoScalingGroupName=asg_name,
             ShouldDecrementDesiredCapacity=True
         )
+        print('[{}] Finish entering instance {} into standby in ASG {}.'.format(stack_prefix, instance_ids, asg_name))
     elif action == 'exit':
+        print('[{}] Start exiting instance {} from standby in ASG {} ...'.format(stack_prefix, instance_ids, asg_name))
         autoscaling.exit_standby(
             InstanceIds=instance_ids,
             AutoScalingGroupName=asg_name
         )
+        print('[{}] Finish exiting instance {} from standby in ASG {}.'.format(stack_prefix, instance_ids, asg_name))
 
+        print('[{}] Start updating ASG {} to {} instances ...'.format(stack_prefix, asg_name, asg_max_size))
         autoscaling.update_auto_scaling_group(
             AutoScalingGroupName=asg_name,
-            MinSize=min(asg_min_size + len(instance_ids), asg_max_sie)
+            MinSize=min(asg_min_size + len(instance_ids), asg_max_size)
         )
+        print('[{}] Finish updating ASG {} to {} instances.'.format(stack_prefix, asg_name, asg_max_size))
 
 
 def retrieve_tag_value(instance_id, tag_key):
@@ -233,29 +251,36 @@ def manage_lock_for_environment(table_name, lock, action):
                     'N': str(ttl)
                 }
             }
-
+            print('Try to lock DynamoDB Table {} ...'.format(table_name))
             dynamodb.put_item(
                 TableName=table_name,
                 Item=item,
                 ConditionExpression='attribute_not_exists(command_id)',
                 ReturnValues='NONE'
             )
+            print(
+                'DynamoDB Table {} locked successfully.'.format(
+                    table_name
+                )
+            )
             succeeded = True
         except botocore.exceptions.ClientError:
             succeeded = False
 
     elif action == 'unlock':
-         dynamodb.delete_item(
+        print('Unlock DynamoDB Table {}'.format(table_name))
+        dynamodb.delete_item(
             TableName=table_name,
             Key={
                 'command_id': {
                     'S': lock
                 }
             }
-         )
-         succeeded = True
+        )
+        succeeded = True
 
     return succeeded
+
 
 def stack_health_check(stack_prefix, min_publish_instances):
     """
@@ -269,10 +294,13 @@ def stack_health_check(stack_prefix, min_publish_instances):
 
     publish_instances = get_publish_ids(stack_prefix)
 
+    print('[{}] Start checking Stack health ...'.format(stack_prefix))
+
     if (len(author_primary_instances) == 1 and
        len(author_standby_instances) == 1 and
        len(publish_instances) >= min_publish_instances):
         paired_publish_dispatcher_id = retrieve_tag_value(publish_instances[0], 'PairInstanceId')
+        print('[{}] Finish checking Stack health successfully.'.format(stack_prefix))
         return {
           'author-primary': author_primary_instances[0],
           'author-standby': author_standby_instances[0],
@@ -473,10 +501,11 @@ def compact_remaining_publish_instances(context):
 
     cmd_id = context['LastCmdId']
     sub_state = context['SubState']
+    stack_prefix = context['StackPrefix']
+    put_state = context['State']
 
     if sub_state == 'PUBLISH_READY':
-
-        manage_autoscaling_standby(context['StackPrefix'], 'enter', byInstanceIds=context['DispatcherIds'])
+        manage_autoscaling_standby(stack_prefix, 'enter', byInstanceIds=context['DispatcherIds'])
         ssm_params = context['SSMCommonParams'].copy()
         ssm_params.update(
             {
@@ -489,14 +518,36 @@ def compact_remaining_publish_instances(context):
                 }
             }
         )
+
+        # Defining DynamoDB Sub State
+        put_sub_state = 'STOP_PUBLISH'
+
+        # Logging pre-infos
+        log_command_info(
+            send_command=put_state + ' / ' + put_sub_state,
+            stack_prefix=stack_prefix,
+            instance_id=ssm_params['InstanceIds'],
+            aem_component='publish',
+        )
+        # Sending out ssm command
         response = send_ssm_cmd(ssm_params)
+        command_id = response['Command']['CommandId']
+
+        # Logging post-infos
+        log_command_info(
+            send_command=put_state + ' / ' + put_sub_state,
+            stack_prefix=stack_prefix,
+            instance_id=ssm_params['InstanceIds'],
+            aem_component='publish',
+            command_id=command_id
+        )
 
         put_state_in_dynamodb(
             context['DynamoDbTable'],
-            response['Command']['CommandId'],
-            context['StackPrefix'],
+            command_id,
+            stack_prefix,
             context['Task'],
-            context['State'],
+            put_state,
             context['Message']['eventTime'],
             context['MessageID'],
             ExternalId=context['ExternalId'],
@@ -504,7 +555,7 @@ def compact_remaining_publish_instances(context):
             InstanceInfo=context['InstanceInfo'],
             PublishIds=context['PublishIds'],
             DispatcherIds=context['DispatcherIds'],
-            SubState='STOP_PUBLISH'
+            SubState=put_sub_state
         )
 
     elif sub_state == 'STOP_PUBLISH':
@@ -517,13 +568,35 @@ def compact_remaining_publish_instances(context):
             }
         )
 
+        # Defining DynamoDB Sub State
+        put_sub_state = 'COMPACT_PUBLISH'
+
+        # Logging pre-infos
+        log_command_info(
+            send_command=put_state + ' / ' + put_sub_state,
+            stack_prefix=stack_prefix,
+            instance_id=ssm_params['InstanceIds'],
+            aem_component='publish',
+        )
+        # Sending out ssm command
         response = send_ssm_cmd(ssm_params)
+        command_id = response['Command']['CommandId']
+
+        # Logging post-infos
+        log_command_info(
+            send_command=put_state + ' / ' + put_sub_state,
+            stack_prefix=stack_prefix,
+            instance_id=ssm_params['InstanceIds'],
+            aem_component='publish',
+            command_id=command_id
+        )
+
         put_state_in_dynamodb(
             context['DynamoDbTable'],
-            response['Command']['CommandId'],
-            context['StackPrefix'],
+            command_id,
+            stack_prefix,
             context['Task'],
-            context['State'],
+            put_state,
             context['Message']['eventTime'],
             context['MessageID'],
             ExternalId=context['ExternalId'],
@@ -531,7 +604,7 @@ def compact_remaining_publish_instances(context):
             InstanceInfo=context['InstanceInfo'],
             PublishIds=context['PublishIds'],
             DispatcherIds=context['DispatcherIds'],
-            SubState='COMPACT_PUBLISH'
+            SubState=put_sub_state
         )
     elif sub_state == 'COMPACT_PUBLISH':
         ssm_params = context['SSMCommonParams'].copy()
@@ -547,13 +620,35 @@ def compact_remaining_publish_instances(context):
             }
         )
 
+        # Defining DynamoDB Sub State
+        put_sub_state = 'START_PUBLISH'
+
+        # Logging pre-infos
+        log_command_info(
+            send_command=put_state + ' / ' + put_sub_state,
+            stack_prefix=stack_prefix,
+            instance_id=ssm_params['InstanceIds'],
+            aem_component='publish',
+        )
+        # Sending out ssm command
         response = send_ssm_cmd(ssm_params)
+        command_id = response['Command']['CommandId']
+
+        # Logging post-infos
+        log_command_info(
+            send_command=put_state + ' / ' + put_sub_state,
+            stack_prefix=stack_prefix,
+            instance_id=ssm_params['InstanceIds'],
+            aem_component='publish',
+            command_id=command_id
+        )
+
         put_state_in_dynamodb(
             context['DynamoDbTable'],
-            response['Command']['CommandId'],
-            context['StackPrefix'],
+            command_id,
+            stack_prefix,
             context['Task'],
-            context['State'],
+            put_state,
             context['Message']['eventTime'],
             context['MessageID'],
             ExternalId=context['ExternalId'],
@@ -561,10 +656,10 @@ def compact_remaining_publish_instances(context):
             InstanceInfo=context['InstanceInfo'],
             PublishIds=context['PublishIds'],
             DispatcherIds=context['DispatcherIds'],
-            SubState='START_PUBLISH'
+            SubState=put_sub_state
         )
     elif sub_state == 'START_PUBLISH':
-        manage_autoscaling_standby(context['StackPrefix'], 'exit', byInstanceIds=context['DispatcherIds'])
+        manage_autoscaling_standby(stack_prefix, 'exit', byInstanceIds=context['DispatcherIds'])
         update_state_in_dynamodb(
             context['DynamoDbTable'],
             cmd_id,
@@ -574,15 +669,28 @@ def compact_remaining_publish_instances(context):
 
         manage_lock_for_environment(
             context['DynamoDbTable'],
-            context['StackPrefix'] + '_backup_lock',
+            stack_prefix + '_backup_lock',
             'unlock'
         )
+
+        print('[{}] Offline compaction backup successfully'.format(stack_prefix))
 
         response = {
             'status': 'Success'
         }
 
     return response
+
+
+def log_command_info(send_command=None, stack_prefix=None, instance_id=None, aem_component=None, command_id=None):
+    if command_id is not None:
+        print('[{}/{}] Command ID: {} ...'.format(stack_prefix, aem_component, command_id))
+        print('[{}/{}] Finished sending command {}'.format(stack_prefix, aem_component, send_command))
+    elif stack_prefix is not None and send_command is not None:
+        print('[{}/{}] Start sending command {} for instance ids:'.format(stack_prefix, aem_component, send_command))
+        print('[{}/{}] {} ...'.format(stack_prefix, aem_component, instance_id))
+    else:
+        print('[{}/{}] {} '.format(stack_prefix, aem_component, send_command))
 
 
 def sns_message_processor(event, context):
@@ -599,7 +707,7 @@ def sns_message_processor(event, context):
         config_file = '/tmp/config.json'
         s3.download_file(bucket, '{}/config.json'.format(prefix), config_file)
     else:
-        logger.info('Unable to locate config.json in S3, searching within bundle')
+        print('Unable to locate config.json in S3, searching within bundle')
         config_file = 'config.json'
 
     with open(config_file, 'r') as f:
@@ -626,10 +734,10 @@ def sns_message_processor(event, context):
                 'Failed'
             ],
             'NotificationType': 'Command'
-        }
-    }
+         }
+     }
 
-    responses=[]
+    responses = []
     for record in event['Records']:
         message_text = record['Sns']['Message']
         message_id = record['Sns']['MessageId']
@@ -659,7 +767,7 @@ def sns_message_processor(event, context):
 
                 # try to acquire stack lock
                 locked = manage_lock_for_environment(dynamodb_table, stack_prefix + '_backup_lock', 'trylock')
-                if locked == False:
+                if not locked:
                     logger.warn("Cannot have two offline snapshots/compactions run in parallel")
                     raise RuntimeError('Another offline snapshot backup/compaction backup is running')
 
@@ -695,8 +803,28 @@ def sns_message_processor(event, context):
                     }
                 }
             )
+            # Defining DynamoDB State
+            put_state = 'STOP_AUTHOR_STANDBY'
 
+            # Logging pre-infos
+            log_command_info(
+                send_command=put_state,
+                stack_prefix=stack_prefix,
+                instance_id=ssm_params['InstanceIds'],
+                aem_component='author-standby',
+            )
+            # Sending out ssm command
             response = send_ssm_cmd(ssm_params)
+            command_id = response['Command']['CommandId']
+
+            # Logging post-infos
+            log_command_info(
+                send_command=put_state,
+                stack_prefix=stack_prefix,
+                instance_id=ssm_params['InstanceIds'],
+                aem_component='author-standby',
+                command_id=command_id
+            )
 
             instance_info = {key: {'S': value} for (key, value) in instances.items()}
             supplement = {
@@ -706,10 +834,10 @@ def sns_message_processor(event, context):
 
             put_state_in_dynamodb(
                 dynamodb_table,
-                response['Command']['CommandId'],
+                command_id,
                 stack_prefix,
                 task,
-                'STOP_AUTHOR_STANDBY',
+                put_state,
                 datetime.datetime.utcnow().isoformat()[:-3] + 'Z',
                 message_id,
                 **supplement
@@ -739,6 +867,11 @@ def sns_message_processor(event, context):
             publish_dispatcher_id = instance_info['publish-dispatcher']['S']
 
             if message['status'] == 'Failed':
+                logger.error('[{}] ERROR: While running offline snapshot process ...'.format(stack_prefix))
+                logger.error('[{}] ERROR: Command ID: {}.'.format(stack_prefix, cmd_id))
+                logger.error('[{}] ERROR: SSM Document: {}.'.format(stack_prefix, message['documentName']))
+                logger.error('[{}] ERROR: Instance ID: {}.'.format(stack_prefix, message['instanceIds']))
+                logger.error('[{}] ERROR: Offline Snapshotting failed.'.format(stack_prefix))
 
                 update_state_in_dynamodb(dynamodb_table, cmd_id, 'Failed', message['eventTime'])
                 # move author-dispatcher instances out of standby
@@ -764,13 +897,35 @@ def sns_message_processor(event, context):
                     }
                 )
 
+                # Defining DynamoDB State
+                put_state = 'STOP_AUTHOR_PRIMARY'
+
+                # Logging pre-infos
+                log_command_info(
+                    send_command=put_state,
+                    stack_prefix=stack_prefix,
+                    instance_id=ssm_params['InstanceIds'],
+                    aem_component='author-primary',
+                )
+                # Sending out ssm command
                 response = send_ssm_cmd(ssm_params)
+                command_id = response['Command']['CommandId']
+
+                # Logging post-infos
+                log_command_info(
+                    send_command=put_state,
+                    stack_prefix=stack_prefix,
+                    instance_id=ssm_params['InstanceIds'],
+                    aem_component='author-primary',
+                    command_id=command_id
+                )
+
                 put_state_in_dynamodb(
                     dynamodb_table,
-                    response['Command']['CommandId'],
+                    command_id,
                     stack_prefix,
                     task,
-                    'STOP_AUTHOR_PRIMARY',
+                    put_state,
                     message['eventTime'],
                     message_id,
                     ExternalId=external_id,
@@ -793,13 +948,35 @@ def sns_message_processor(event, context):
                     }
                 )
 
+                # Defining DynamoDB State
+                put_state = 'STOP_PUBLISH'
+
+                # Logging pre-infos
+                log_command_info(
+                    send_command=put_state,
+                    stack_prefix=stack_prefix,
+                    instance_id=ssm_params['InstanceIds'],
+                    aem_component='publish',
+                )
+                # Sending out ssm command
                 response = send_ssm_cmd(ssm_params)
+                command_id = response['Command']['CommandId']
+
+                # Logging post-infos
+                log_command_info(
+                    send_command=put_state,
+                    stack_prefix=stack_prefix,
+                    instance_id=ssm_params['InstanceIds'],
+                    aem_component='publish',
+                    command_id=command_id
+                )
+
                 put_state_in_dynamodb(
                     dynamodb_table,
-                    response['Command']['CommandId'],
+                    command_id,
                     stack_prefix,
                     task,
-                    'STOP_PUBLISH',
+                    put_state,
                     message['eventTime'],
                     message_id,
                     ExternalId=external_id,
@@ -819,13 +996,35 @@ def sns_message_processor(event, context):
                         }
                     )
 
+                    # Defining DynamoDB State
+                    put_state = 'OFFLINE_BACKUP'
+
+                    # Logging pre-infos
+                    log_command_info(
+                        send_command=put_state,
+                        stack_prefix=stack_prefix,
+                        instance_id=ssm_params['InstanceIds'],
+                        aem_component='author-standby/author-primary/publish',
+                    )
+                    # Sending out ssm command
                     response = send_ssm_cmd(ssm_params)
+                    command_id = response['Command']['CommandId']
+
+                    # Logging post-infos
+                    log_command_info(
+                        send_command=put_state,
+                        stack_prefix=stack_prefix,
+                        instance_id=ssm_params['InstanceIds'],
+                        aem_component='author-standby/author-primary/publish',
+                        command_id=command_id
+                    )
+
                     put_state_in_dynamodb(
                         dynamodb_table,
-                        response['Command']['CommandId'],
+                        command_id,
                         stack_prefix,
                         task,
-                        'OFFLINE_BACKUP',
+                        put_state,
                         message['eventTime'],
                         message_id,
                         ExternalId=external_id,
@@ -843,13 +1042,35 @@ def sns_message_processor(event, context):
                         }
                     )
 
+                    # Defining DynamoDB State
+                    put_state = 'OFFLINE_COMPACTION'
+
+                    # Logging pre-infos
+                    log_command_info(
+                        send_command=put_state,
+                        stack_prefix=stack_prefix,
+                        instance_id=ssm_params['InstanceIds'],
+                        aem_component='author-standby/author-primary/publish',
+                    )
+                    # Sending out ssm command
                     response = send_ssm_cmd(ssm_params)
+                    command_id = response['Command']['CommandId']
+
+                    # Logging post-infos
+                    log_command_info(
+                        send_command=put_state,
+                        stack_prefix=stack_prefix,
+                        instance_id=ssm_params['InstanceIds'],
+                        aem_component='author-standby/author-primary/publish',
+                        command_id=command_id
+                    )
+
                     put_state_in_dynamodb(
                         dynamodb_table,
-                        response['Command']['CommandId'],
+                        command_id,
                         stack_prefix,
                         task,
-                        'OFFLINE_COMPACTION',
+                        put_state,
                         message['eventTime'],
                         message_id,
                         ExternalId=external_id,
@@ -869,13 +1090,35 @@ def sns_message_processor(event, context):
                     }
                 )
 
+                # Defining DynamoDB State
+                put_state = 'OFFLINE_BACKUP'
+
+                # Logging pre-infos
+                log_command_info(
+                    send_command=put_state,
+                    stack_prefix=stack_prefix,
+                    instance_id=ssm_params['InstanceIds'],
+                    aem_component='author-standby/author-primary/publish',
+                )
+                # Sending out ssm command
                 response = send_ssm_cmd(ssm_params)
+                command_id = response['Command']['CommandId']
+
+                # Logging post-infos
+                log_command_info(
+                    send_command=put_state,
+                    stack_prefix=stack_prefix,
+                    instance_id=ssm_params['InstanceIds'],
+                    aem_component='author-standby/author-primary/publish',
+                    command_id=command_id
+                )
+
                 put_state_in_dynamodb(
                     dynamodb_table,
-                    response['Command']['CommandId'],
+                    command_id,
                     stack_prefix,
                     task,
-                    'OFFLINE_BACKUP',
+                    put_state,
                     message['eventTime'],
                     message_id,
                     ExternalId=external_id,
@@ -898,13 +1141,35 @@ def sns_message_processor(event, context):
                     }
                 )
 
+                # Defining DynamoDB State
+                put_state = 'START_AUTHOR_PRIMARY'
+
+                # Logging pre-infos
+                log_command_info(
+                    send_command=put_state,
+                    stack_prefix=stack_prefix,
+                    instance_id=ssm_params['InstanceIds'],
+                    aem_component='author-primary',
+                )
+                # Sending out ssm command
                 response = send_ssm_cmd(ssm_params)
+                command_id = response['Command']['CommandId']
+
+                # Logging post-infos
+                log_command_info(
+                    send_command=put_state,
+                    stack_prefix=stack_prefix,
+                    instance_id=ssm_params['InstanceIds'],
+                    aem_component='author-primary',
+                    command_id=command_id
+                )
+
                 put_state_in_dynamodb(
                     dynamodb_table,
-                    response['Command']['CommandId'],
+                    command_id,
                     stack_prefix,
                     task,
-                    'START_AUTHOR_PRIMARY',
+                    put_state,
                     message['eventTime'],
                     message_id,
                     ExternalId=external_id,
@@ -927,13 +1192,36 @@ def sns_message_processor(event, context):
                         }
                     }
                 )
+
+                # Defining DynamoDB State
+                put_state = 'START_AUTHOR_STANDBY'
+
+                # Logging pre-infos
+                log_command_info(
+                    send_command=put_state,
+                    stack_prefix=stack_prefix,
+                    instance_id=ssm_params['InstanceIds'],
+                    aem_component='author-standby',
+                )
+                # Sending out ssm command
                 response = send_ssm_cmd(ssm_params)
+                command_id = response['Command']['CommandId']
+
+                # Logging post-infos
+                log_command_info(
+                    send_command=put_state,
+                    stack_prefix=stack_prefix,
+                    instance_id=ssm_params['InstanceIds'],
+                    aem_component='author-standby',
+                    command_id=command_id
+                )
+
                 put_state_in_dynamodb(
                     dynamodb_table,
-                    response['Command']['CommandId'],
+                    command_id,
                     stack_prefix,
                     task,
-                    'START_AUTHOR_STANDBY',
+                    put_state,
                     message['eventTime'],
                     message_id,
                     ExternalId=external_id,
@@ -957,13 +1245,35 @@ def sns_message_processor(event, context):
                     }
                 )
 
+                # Defining DynamoDB State
+                put_state = 'START_PUBLISH'
+
+                # Logging pre-infos
+                log_command_info(
+                    send_command=put_state,
+                    stack_prefix=stack_prefix,
+                    instance_id=ssm_params['InstanceIds'],
+                    aem_component='publish',
+                )
+                # Sending out ssm command
                 response = send_ssm_cmd(ssm_params)
+                command_id = response['Command']['CommandId']
+
+                # Logging post-infos
+                log_command_info(
+                    send_command=put_state,
+                    stack_prefix=stack_prefix,
+                    instance_id=ssm_params['InstanceIds'],
+                    aem_component='publish',
+                    command_id=command_id
+                )
+
                 put_state_in_dynamodb(
                     dynamodb_table,
-                    response['Command']['CommandId'],
+                    command_id,
                     stack_prefix,
                     task,
-                    'START_PUBLISH',
+                    put_state,
                     message['eventTime'],
                     message_id,
                     ExternalId=external_id,
@@ -977,7 +1287,7 @@ def sns_message_processor(event, context):
                 # this is the success notification message
                 if task == 'offline-snapshot-full-set':
                     update_state_in_dynamodb(dynamodb_table, cmd_id, 'Success', message['eventTime'])
-                    print('Offline backup for environment {} finished successfully'.format(stack_prefix))
+                    print('[{}] Offline backup finished successfully'.format(stack_prefix))
 
                     # move author-dispatcher instances out of standby
                     manage_autoscaling_standby(stack_prefix, 'exit', byComponent='author-dispatcher')
@@ -1009,14 +1319,37 @@ def sns_message_processor(event, context):
                             'Comment': 'Wait Until AEM Service is properly up on the selected publish instance'
                         }
                     )
+
+                    # Defining DynamoDB State
+                    put_state = 'COMPACT_REMAINING_PUBLISHERS'
+                    put_sub_state = 'PUBLISH_READY'
+
+                    # Logging pre-infos
+                    log_command_info(
+                        send_command=put_state + ' / ' + put_sub_state,
+                        stack_prefix=stack_prefix,
+                        instance_id=ssm_params['InstanceIds'],
+                        aem_component='publish',
+                    )
+                    # Sending out ssm command
                     response = send_ssm_cmd(ssm_params)
+                    command_id = response['Command']['CommandId']
+
+                    # Logging post-infos
+                    log_command_info(
+                        send_command=put_state + ' / ' + put_sub_state,
+                        stack_prefix=stack_prefix,
+                        instance_id=ssm_params['InstanceIds'],
+                        aem_component='publish',
+                        command_id=command_id
+                    )
 
                     put_state_in_dynamodb(
                         dynamodb_table,
-                        response['Command']['CommandId'],
+                        command_id,
                         stack_prefix,
                         task,
-                        'COMPACT_REMAINING_PUBLISHERS',
+                        put_state,
                         message['eventTime'],
                         message_id,
                         ExternalId=external_id,
@@ -1024,7 +1357,7 @@ def sns_message_processor(event, context):
                         LastCommand=cmd_id,
                         PublishIds=remaining_pub_disp_pairs[0],
                         DispatcherIds=remaining_pub_disp_pairs[1],
-                        SubState='PUBLISH_READY'
+                        SubState=put_sub_state
                     )
 
                     responses.append(response)
