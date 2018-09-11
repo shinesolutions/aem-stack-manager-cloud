@@ -179,7 +179,7 @@ def manage_autoscaling_standby(stack_prefix, action, **kwargs):
             AutoScalingGroupName=asg_name,
             MinSize=max(asg_min_size - len(instance_ids), 0)
         )
-        print('[{}] Finish updating ASG {} to 0 instances.'.format(stack_prefix, asg_name))
+        print('[{}] Finished updating ASG {} to 0 instances.'.format(stack_prefix, asg_name))
 
         print('[{}] Start entering instance {} into standby in ASG {} ...'.format(stack_prefix, instance_ids, asg_name))
         autoscaling.enter_standby(
@@ -187,21 +187,21 @@ def manage_autoscaling_standby(stack_prefix, action, **kwargs):
             AutoScalingGroupName=asg_name,
             ShouldDecrementDesiredCapacity=True
         )
-        print('[{}] Finish entering instance {} into standby in ASG {}.'.format(stack_prefix, instance_ids, asg_name))
+        print('[{}] Finished entering instance {} into standby in ASG {}.'.format(stack_prefix, instance_ids, asg_name))
     elif action == 'exit':
         print('[{}] Start exiting instance {} from standby in ASG {} ...'.format(stack_prefix, instance_ids, asg_name))
         autoscaling.exit_standby(
             InstanceIds=instance_ids,
             AutoScalingGroupName=asg_name
         )
-        print('[{}] Finish exiting instance {} from standby in ASG {}.'.format(stack_prefix, instance_ids, asg_name))
+        print('[{}] Finished exiting instance {} from standby in ASG {}.'.format(stack_prefix, instance_ids, asg_name))
 
         print('[{}] Start updating ASG {} to {} instances ...'.format(stack_prefix, asg_name, asg_max_size))
         autoscaling.update_auto_scaling_group(
             AutoScalingGroupName=asg_name,
             MinSize=min(asg_min_size + len(instance_ids), asg_max_size)
         )
-        print('[{}] Finish updating ASG {} to {} instances.'.format(stack_prefix, asg_name, asg_max_size))
+        print('[{}] Finished updating ASG {} to {} instances.'.format(stack_prefix, asg_name, asg_max_size))
 
 
 def retrieve_tag_value(instance_id, tag_key):
@@ -300,7 +300,7 @@ def stack_health_check(stack_prefix, min_publish_instances):
        len(author_standby_instances) == 1 and
        len(publish_instances) >= min_publish_instances):
         paired_publish_dispatcher_id = retrieve_tag_value(publish_instances[0], 'PairInstanceId')
-        print('[{}] Finish checking Stack health successfully.'.format(stack_prefix))
+        print('[{}] Finished checking Stack health successfully.'.format(stack_prefix))
         return {
           'author-primary': author_primary_instances[0],
           'author-standby': author_standby_instances[0],
