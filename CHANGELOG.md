@@ -1,4 +1,5 @@
 ### 1.3.1
+* Add additional log messages for the Offline Snapshot Lambda function #29
 *
 
 ### 1.3.0
