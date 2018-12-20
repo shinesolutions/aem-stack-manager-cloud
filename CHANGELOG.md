@@ -1,5 +1,5 @@
 ### 1.3.2
-*
+* Add offline-snapshot/offline-compaction-snapshot support of inexistent of component Author-Standby #28
 
 ### 1.3.1
 * Add additional log messages for the Offline Snapshot Lambda function #29

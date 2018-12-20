@@ -100,6 +100,23 @@ def get_author_standby_ids(stack_prefix):
     return instance_ids_by_tags(filters)
 
 
+def get_promoted_author_standby_ids(stack_prefix):
+    filters = [
+        {
+            'Name': 'tag:StackPrefix',
+            'Values': [stack_prefix]
+        }, {
+            'Name': 'instance-state-name',
+            'Values': ['running']
+        }, {
+            'Name': 'tag:aws:cloudformation:logical-id',
+            'Values': ['AuthorStandbyInstance']
+        }
+    ]
+
+    return instance_ids_by_tags(filters)
+
+
 def get_publish_ids(stack_prefix):
     filters = [
         {
@@ -288,17 +305,23 @@ def stack_health_check(stack_prefix, min_publish_instances):
     author-standby and publisher instances.
     """
 
+    # Get instances by components
     author_primary_instances = get_author_primary_ids(stack_prefix)
-
     author_standby_instances = get_author_standby_ids(stack_prefix)
-
     publish_instances = get_publish_ids(stack_prefix)
+    promoted_author_standby_instances = get_promoted_author_standby_ids(stack_prefix)
+
+    # Count instances
+    author_primary_count = len(author_primary_instances)
+    author_standby_count = len(author_standby_instances)
+    publish_count = len(publish_instances)
+    promoted_author_standby_instances_count = len(promoted_author_standby_instances)
 
     print('[{}] Start checking Stack health ...'.format(stack_prefix))
 
-    if (len(author_primary_instances) == 1 and
-       len(author_standby_instances) == 1 and
-       len(publish_instances) >= min_publish_instances):
+    if (author_primary_count == 1 and
+        author_standby_count== 1 and
+        publish_count>= min_publish_instances):
         paired_publish_dispatcher_id = retrieve_tag_value(publish_instances[0], 'PairInstanceId')
         print('[{}] Finished checking Stack health successfully.'.format(stack_prefix))
         return {
@@ -307,15 +330,30 @@ def stack_health_check(stack_prefix, min_publish_instances):
           'publish': publish_instances[0],
           'publish-dispatcher': paired_publish_dispatcher_id
         }
+    elif(promoted_author_standby_instances_count == 1 and
+        author_standby_count== 0 and
+        publish_count>= min_publish_instances):
+        paired_publish_dispatcher_id = retrieve_tag_value(publish_instances[0], 'PairInstanceId')
+        print('[{}] WARN: Found promoted Author Standby going to run offline-snapshot only on promoted Author instance.'.format(stack_prefix))
+        print('[{}] Finished checking Stack health successfully.'.format(stack_prefix))
+        return {
+          'author-primary': promoted_author_standby_instances[0],
+          'author-standby': 'Promoted',
+          'publish': publish_instances[0],
+          'publish-dispatcher': paired_publish_dispatcher_id
+        }
 
-    if len(author_primary_instances) != 1:
-        logger.error('Found {} author-primary instances. Unhealthy stack.'.format(len(author_primary_instances)))
+    if author_primary_count != 1:
+        logger.error('Found {} author-primary instances. Unhealthy stack.'.format(author_primary_count))
 
-    if len(author_standby_instances) != 1:
-        logger.error('Found {} author-standby instances. Unhealthy stack.'.format(len(author_standby_instances)))
+    if author_standby_count != 1:
+        logger.error('Found {} author-standby instances. Unhealthy stack.'.format(author_standby_count))
 
-    if len(publish_instances) < min_publish_instances:
-        logger.error('Found {} publish instances. Unhealthy stack.'.format(len(publish_instances)))
+    if promoted_author_standby_instances_count != 0:
+        logger.error('Found {} promoted author-standby instances. Unhealthy stack.'.format(author_primary_count))
+
+    if publish_count < min_publish_instances:
+        logger.error('Found {} publish instances. Unhealthy stack.'.format(publish_count))
 
     return None
 
@@ -803,47 +841,106 @@ def sns_message_processor(event, context):
                     }
                 }
             )
-            # Defining DynamoDB State
-            put_state = 'STOP_AUTHOR_STANDBY'
 
-            # Logging pre-infos
-            log_command_info(
-                send_command=put_state,
-                stack_prefix=stack_prefix,
-                instance_id=ssm_params['InstanceIds'],
-                aem_component='author-standby',
-            )
-            # Sending out ssm command
-            response = send_ssm_cmd(ssm_params)
-            command_id = response['Command']['CommandId']
+            # Check if Author Standby is promoted to primary
+            if instances['author-standby'] is not 'Promoted':
+                # Defining DynamoDB State
+                put_state = 'STOP_AUTHOR_STANDBY'
 
-            # Logging post-infos
-            log_command_info(
-                send_command=put_state,
-                stack_prefix=stack_prefix,
-                instance_id=ssm_params['InstanceIds'],
-                aem_component='author-standby',
-                command_id=command_id
-            )
+                # Logging pre-infos
+                log_command_info(
+                    send_command=put_state,
+                    stack_prefix=stack_prefix,
+                    instance_id=ssm_params['InstanceIds'],
+                    aem_component='author-standby',
+                )
+                # Sending out ssm command
+                response = send_ssm_cmd(ssm_params)
+                command_id = response['Command']['CommandId']
 
-            instance_info = {key: {'S': value} for (key, value) in instances.items()}
-            supplement = {
-                'InstanceInfo': instance_info,
-                'ExternalId': external_id
-            }
+                # Logging post-infos
+                log_command_info(
+                    send_command=put_state,
+                    stack_prefix=stack_prefix,
+                    instance_id=ssm_params['InstanceIds'],
+                    aem_component='author-standby',
+                    command_id=command_id
+                )
 
-            put_state_in_dynamodb(
-                dynamodb_table,
-                command_id,
-                stack_prefix,
-                task,
-                put_state,
-                datetime.datetime.utcnow().isoformat()[:-3] + 'Z',
-                message_id,
-                **supplement
-            )
+                instance_info = {key: {'S': value} for (key, value) in instances.items()}
+                supplement = {
+                    'InstanceInfo': instance_info,
+                    'ExternalId': external_id
+                }
 
-            responses.append(response)
+                put_state_in_dynamodb(
+                    dynamodb_table,
+                    command_id,
+                    stack_prefix,
+                    task,
+                    put_state,
+                    datetime.datetime.utcnow().isoformat()[:-3] + 'Z',
+                    message_id,
+                    **supplement
+                )
+
+                responses.append(response)
+            # If Author Standby is promoted to Author Primary skip stop for Author Standby
+            else:
+                author_primary_id = instances['author-primary']
+                instance_info = {key: {'S': value} for (key, value) in instances.items()}
+                supplement = {
+                    'InstanceInfo': instance_info,
+                    'ExternalId': external_id
+                }
+
+                ssm_params = ssm_common_params.copy()
+                ssm_params.update(
+                    {
+                        'InstanceIds': [author_primary_id],
+                        'DocumentName': task_document_mapping['manage-service'],
+                        'Comment': 'Stop AEM service on Author primary instances',
+                        'Parameters': {
+                            'aemid': ['author'],
+                            'action': ['stop']
+                        }
+                    }
+                )
+
+                # Defining DynamoDB State
+                put_state = 'STOP_AUTHOR_PRIMARY'
+
+                # Logging pre-infos
+                log_command_info(
+                    send_command=put_state,
+                    stack_prefix=stack_prefix,
+                    instance_id=ssm_params['InstanceIds'],
+                    aem_component='author-primary',
+                )
+                # Sending out ssm command
+                response = send_ssm_cmd(ssm_params)
+                command_id = response['Command']['CommandId']
+
+                # Logging post-infos
+                log_command_info(
+                    send_command=put_state,
+                    stack_prefix=stack_prefix,
+                    instance_id=ssm_params['InstanceIds'],
+                    aem_component='author-primary',
+                    command_id=command_id
+                )
+
+                put_state_in_dynamodb(
+                    dynamodb_table,
+                    command_id,
+                    stack_prefix,
+                    task,
+                    put_state,
+                    datetime.datetime.utcnow().isoformat()[:-3] + 'Z',
+                    message_id,
+                    **supplement
+                )
+                responses.append(response)
         else:
             cmd_id = message['commandId']
 
@@ -988,13 +1085,22 @@ def sns_message_processor(event, context):
             elif state == 'STOP_PUBLISH':
                 ssm_params = ssm_common_params.copy()
                 if task == 'offline-snapshot-full-set':
-                    ssm_params.update(
-                        {
-                            'InstanceIds': [author_primary_id, author_standby_id, publish_id],
-                            'DocumentName': task_document_mapping['offline-snapshot-full-set'],
-                            'Comment': 'Run offline snapshot on Author and a select publish instances'
-                        }
-                    )
+                    if author_standby_id == 'Promoted':
+                        ssm_params.update(
+                            {
+                                'InstanceIds': [author_primary_id, publish_id],
+                                'DocumentName': task_document_mapping['offline-snapshot-full-set'],
+                                'Comment': 'Run offline snapshot on Author and a select publish instances'
+                            }
+                        )
+                    else:
+                        ssm_params.update(
+                            {
+                                'InstanceIds': [author_primary_id, author_standby_id, publish_id],
+                                'DocumentName': task_document_mapping['offline-snapshot-full-set'],
+                                'Comment': 'Run offline snapshot on Author and a select publish instances'
+                            }
+                        )
 
                     # Defining DynamoDB State
                     put_state = 'OFFLINE_BACKUP'
@@ -1034,14 +1140,22 @@ def sns_message_processor(event, context):
 
                     responses.append(response)
                 elif task == 'offline-compaction-snapshot-full-set':
-                    ssm_params.update(
-                        {
-                            'InstanceIds': [author_primary_id, author_standby_id, publish_id],
-                            'DocumentName': task_document_mapping['offline-compaction-snapshot-full-set'],
-                            'Comment': 'Run offline compaction on Author and a selected Publish instances'
-                        }
-                    )
-
+                    if author_standby_id == 'Promoted':
+                        ssm_params.update(
+                            {
+                                'InstanceIds': [author_primary_id, publish_id],
+                                'DocumentName': task_document_mapping['offline-compaction-snapshot-full-set'],
+                                'Comment': 'Run offline compaction on Author and a selected Publish instances'
+                            }
+                        )
+                    else:
+                        ssm_params.update(
+                            {
+                                'InstanceIds': [author_primary_id, author_standby_id, publish_id],
+                                'DocumentName': task_document_mapping['offline-compaction-snapshot-full-set'],
+                                'Comment': 'Run offline compaction on Author and a selected Publish instances'
+                            }
+                        )
                     # Defining DynamoDB State
                     put_state = 'OFFLINE_COMPACTION'
 
@@ -1082,13 +1196,23 @@ def sns_message_processor(event, context):
 
             elif state == 'OFFLINE_COMPACTION':
                 ssm_params = ssm_common_params.copy()
-                ssm_params.update(
-                    {
-                        'InstanceIds': [author_primary_id, author_standby_id, publish_id],
-                        'DocumentName': task_document_mapping['offline-snapshot-full-set'],
-                        'Comment': 'Run offline EBS snapshot on Author and a selected Publish instances'
-                    }
-                )
+                if author_standby_id == 'Promoted':
+                    ssm_params.update(
+                        {
+                            'InstanceIds': [author_primary_id, publish_id],
+                            'DocumentName': task_document_mapping['offline-snapshot-full-set'],
+                            'Comment': 'Run offline EBS snapshot on Author and a selected Publish instances'
+                        }
+                    )
+                else:
+                    ssm_params.update(
+                        {
+                            'InstanceIds': [author_primary_id, author_standby_id, publish_id],
+                            'DocumentName': task_document_mapping['offline-snapshot-full-set'],
+                            'Comment': 'Run offline EBS snapshot on Author and a selected Publish instances'
+                        }
+                    )
+
 
                 # Defining DynamoDB State
                 put_state = 'OFFLINE_BACKUP'
@@ -1179,7 +1303,7 @@ def sns_message_processor(event, context):
 
                 responses.append(response)
 
-            elif state == 'START_AUTHOR_PRIMARY':
+            elif state == 'START_AUTHOR_PRIMARY' and author_standby_id != 'Promoted':
                 ssm_params = ssm_common_params.copy()
                 ssm_params.update(
                     {
@@ -1231,7 +1355,7 @@ def sns_message_processor(event, context):
 
                 responses.append(response)
 
-            elif state == 'START_AUTHOR_STANDBY':
+            elif state == 'START_AUTHOR_STANDBY' or state == 'START_AUTHOR_PRIMARY' and author_standby_id == 'Promoted':
                 ssm_params = ssm_common_params.copy()
                 ssm_params.update(
                     {
