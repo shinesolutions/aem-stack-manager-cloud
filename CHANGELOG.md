@@ -1,4 +1,3 @@
-
 # Changelog
 All notable changes to this project will be documented in this file.
 
@@ -8,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### [Unreleased]
 
 ### Changed
--
+- Handle inexistent author-standby component during offline-snapshot/offline-compaction-snapshot #28
 
 ### [1.3.1] - 2018-09-11
 
