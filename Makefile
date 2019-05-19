@@ -27,4 +27,7 @@ package:
 	    --exclude='*.retry' \
 	    --exclude='*.iml'
 
-.PHONY:  ci clean deps lint package
+release:
+	rtk release
+
+.PHONY:  ci clean deps lint package release
