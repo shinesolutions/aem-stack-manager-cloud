@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Fixed
+- Fixed ec2 filter for getting AEM Author-Standby instance #35
+
 ## 1.3.3 - 2019-05-19
 ### Changed
 - Lock down dependencies version
