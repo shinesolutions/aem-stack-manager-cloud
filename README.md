@@ -1,3 +1,6 @@
+[![Build Status](https://img.shields.io/travis/shinesolutions/aem-stack-manager-cloud.svg)](http://travis-ci.org/shinesolutions/aem-stack-manager-cloud)
+[![Known Vulnerabilities](https://snyk.io/test/github/shinesolutions/aem-stack-manager-cloud/badge.svg)](https://snyk.io/test/github/shinesolutions/aem-stack-manager-cloud)
+
 # aem-stack-manager-cloud
 AEM Stack Manager Cloud Native Implementation
 
