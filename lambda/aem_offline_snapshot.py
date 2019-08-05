@@ -317,11 +317,15 @@ def stack_health_check(stack_prefix, min_publish_instances):
     publish_count = len(publish_instances)
     promoted_author_standby_instances_count = len(promoted_author_standby_instances)
 
+    # make sure min_publish_instances is integer
+    if type(min_publish_instances) is str:
+        min_publish_instances = int(min_publish_instances)
+
     print('[{}] Start checking Stack health ...'.format(stack_prefix))
 
     if (author_primary_count == 1 and
         author_standby_count == 1 and
-        publish_count>= min_publish_instances):
+        publish_count >= min_publish_instances):
         paired_publish_dispatcher_id = retrieve_tag_value(publish_instances[0], 'PairInstanceId')
         print('[{}] Finished checking Stack health successfully.'.format(stack_prefix))
         return {
@@ -332,7 +336,7 @@ def stack_health_check(stack_prefix, min_publish_instances):
         }
     elif(promoted_author_standby_instances_count == 1 and
         author_standby_count == 0 and
-        publish_count>= min_publish_instances):
+        publish_count >= min_publish_instances):
         paired_publish_dispatcher_id = retrieve_tag_value(publish_instances[0], 'PairInstanceId')
         print('[{}] WARN: Found promoted Author Standby going to run offline-snapshot only on promoted Author instance.'.format(stack_prefix))
         print('[{}] Finished checking Stack health successfully.'.format(stack_prefix))
@@ -796,9 +800,10 @@ def sns_message_processor(event, context):
 
             # enclosed in try is sanity check: stack health and no concurrent runs
             try:
+                min_publish_instance = int(offline_snapshot_config['min-publish-instances'])
                 instances = stack_health_check(
                     stack_prefix,
-                    offline_snapshot_config['min-publish-instances']
+                    min_publish_instance
                 )
                 if instances is None:
                     raise RuntimeError('Unhealthy Stack')
