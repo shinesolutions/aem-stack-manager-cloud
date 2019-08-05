@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Fixed
+- Fixed passing of wrong parameter type on offline-snapshot [#37]
+
 ## 1.3.4 - 2019-08-04
 ### Fixed
 - Fixed ec2 filter for getting AEM Author-Standby instance [#35]
