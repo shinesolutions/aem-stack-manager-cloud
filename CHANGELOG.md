@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+- Add new lambda function for streaming CloudWatch logs to S3
+
 ## 1.3.5 - 2019-08-05
 ### Fixed
 - Fixed passing of wrong parameter type on offline-snapshot [#37]
