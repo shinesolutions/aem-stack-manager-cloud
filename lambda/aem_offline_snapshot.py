@@ -189,9 +189,10 @@ def manage_autoscaling_standby(stack_prefix, action, **kwargs):
     asg_min_size = asg_dcrb['AutoScalingGroups'][0]['MinSize']
     asg_max_size = asg_dcrb['AutoScalingGroups'][0]['MaxSize']
 
+    min_size = max(asg_min_size - len(instance_ids), 0)
+
     # manage the instances standby mode
     if action == 'enter':
-        print('[{}] Start updating ASG {} to 0 instances ...'.format(stack_prefix, asg_name))
         print('[{}] Start updating ASG {} to suspend AlarmNotification processes ...'.format(stack_prefix, asg_name))
         autoscaling.suspend_processes(
             AutoScalingGroupName=asg_name,
@@ -201,11 +202,12 @@ def manage_autoscaling_standby(stack_prefix, action, **kwargs):
         )
         print('[{}] Finished updating ASG {} to suspend AlarmNotification processes ...'.format(stack_prefix, asg_name))
 
+        print('[{}] Start updating ASG {} to {} instances ...'.format(stack_prefix, asg_name, min_size))
         autoscaling.update_auto_scaling_group(
             AutoScalingGroupName=asg_name,
-            MinSize=max(asg_min_size - len(instance_ids), 0)
+            MinSize=min_size
         )
-        print('[{}] Finished updating ASG {} to 0 instances.'.format(stack_prefix, asg_name))
+        print('[{}] Finished updating ASG {} to {} instances.'.format(stack_prefix, asg_name, min_size))
 
         print('[{}] Start entering instance {} into standby in ASG {} ...'.format(stack_prefix, instance_ids, asg_name))
         autoscaling.enter_standby(
