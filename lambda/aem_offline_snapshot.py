@@ -192,6 +192,15 @@ def manage_autoscaling_standby(stack_prefix, action, **kwargs):
     # manage the instances standby mode
     if action == 'enter':
         print('[{}] Start updating ASG {} to 0 instances ...'.format(stack_prefix, asg_name))
+        print('[{}] Start updating ASG {} to suspend AlarmNotification processes ...'.format(stack_prefix, asg_name))
+        autoscaling.suspend_processes(
+            AutoScalingGroupName=asg_name,
+            ScalingProcesses=[
+                'AlarmNotification',
+            ]
+        )
+        print('[{}] Finished updating ASG {} to suspend AlarmNotification processes ...'.format(stack_prefix, asg_name))
+
         autoscaling.update_auto_scaling_group(
             AutoScalingGroupName=asg_name,
             MinSize=max(asg_min_size - len(instance_ids), 0)
@@ -220,6 +229,14 @@ def manage_autoscaling_standby(stack_prefix, action, **kwargs):
         )
         print('[{}] Finished updating ASG {} to {} instances.'.format(stack_prefix, asg_name, asg_max_size))
 
+        print('[{}] Start updating ASG {} to allow AlarmNotification processes again ...'.format(stack_prefix, asg_name))
+        autoscaling.resume_processes(
+            AutoScalingGroupName=asg_name,
+            ScalingProcesses=[
+                'AlarmNotification',
+            ]
+        )
+        print('[{}] Finished updating ASG {} to allow AlarmNotification processes again ...'.format(stack_prefix, asg_name))
 
 def retrieve_tag_value(instance_id, tag_key):
     response = boto3.client('ec2').describe_tags(
