@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+- Add new process to suspend/resume ASG process `AlarmNotification` while aem_offline_snapshot lambda is running [shinesolutions/aem-aws-stack-builder#295]
+
+### Fixed
+- Fix print of wrong instance count while updating publish-dispatcher ASG.
+
+
 ## 1.4.0 - 2019-09-17
 ### Added
 - Add new lambda function for streaming CloudWatch logs to S3
