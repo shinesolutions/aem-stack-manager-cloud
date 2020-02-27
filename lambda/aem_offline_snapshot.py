@@ -575,7 +575,8 @@ def compact_remaining_publish_instances(context):
                 'Comment': 'Stop AEM service on remaining publish instances',
                 'Parameters': {
                     'aemid': ['publish'],
-                    'action': ['stop']
+                    'action': ['stop'],
+                    'executionTimeout': ['3600']
                 }
             }
         )
@@ -625,7 +626,10 @@ def compact_remaining_publish_instances(context):
             {
                 'InstanceIds': context['PublishIds'],
                 'DocumentName': context['TaskDocumentMapping']['offline-compaction-snapshot-full-set'],
-                'Comment': 'Run offline compaction on all remaining publish instances'
+                'Comment': 'Run offline compaction on all remaining publish instances',
+                'Parameters': {
+                    'executionTimeout': ['14400']
+                }
             }
         )
 
@@ -676,7 +680,8 @@ def compact_remaining_publish_instances(context):
                 'Comment': 'Start AEM Service on all the publish instances',
                 'Parameters': {
                     'aemid': ['publish'],
-                    'action': ['start']
+                    'action': ['start'],
+                    'executionTimeout': ['3600']
                 }
             }
         )
@@ -861,7 +866,8 @@ def sns_message_processor(event, context):
                     'Comment': 'Kick start offline backup with stopping AEM service on Author standby instance',
                     'Parameters': {
                         'aemid': ['author'],
-                        'action': ['stop']
+                        'action': ['stop'],
+                        'executionTimeout': ['3600']
                     }
                 }
             )
@@ -926,7 +932,8 @@ def sns_message_processor(event, context):
                         'Comment': 'Stop AEM service on Author primary instances',
                         'Parameters': {
                             'aemid': ['author'],
-                            'action': ['stop']
+                            'action': ['stop'],
+                            'executionTimeout': ['3600']
                         }
                     }
                 )
@@ -1013,7 +1020,8 @@ def sns_message_processor(event, context):
                         'Comment': 'Stop AEM service on Author primary instances',
                         'Parameters': {
                             'aemid': ['author'],
-                            'action': ['stop']
+                            'action': ['stop'],
+                            'executionTimeout': ['3600']
                         }
                     }
                 )
@@ -1064,7 +1072,8 @@ def sns_message_processor(event, context):
                         'Comment': 'Stop AEM service on Publish instances',
                         'Parameters': {
                             'aemid': ['publish'],
-                            'action': ['stop']
+                            'action': ['stop'],
+                            'executionTimeout': ['3600']
                         }
                     }
                 )
@@ -1114,7 +1123,10 @@ def sns_message_processor(event, context):
                             {
                                 'InstanceIds': [author_primary_id, publish_id],
                                 'DocumentName': task_document_mapping['offline-snapshot-full-set'],
-                                'Comment': 'Run offline snapshot on Author and a select publish instances'
+                                'Comment': 'Run offline snapshot on Author and a select publish instances',
+                                'Parameters': {
+                                    'executionTimeout': ['14400']
+                                }
                             }
                         )
                     else:
@@ -1122,7 +1134,10 @@ def sns_message_processor(event, context):
                             {
                                 'InstanceIds': [author_primary_id, author_standby_id, publish_id],
                                 'DocumentName': task_document_mapping['offline-snapshot-full-set'],
-                                'Comment': 'Run offline snapshot on Author and a select publish instances'
+                                'Comment': 'Run offline snapshot on Author and a select publish instances',
+                                'Parameters': {
+                                    'executionTimeout': ['14400']
+                                }
                             }
                         )
 
@@ -1169,7 +1184,10 @@ def sns_message_processor(event, context):
                             {
                                 'InstanceIds': [author_primary_id, publish_id],
                                 'DocumentName': task_document_mapping['offline-compaction-snapshot-full-set'],
-                                'Comment': 'Run offline compaction on Author and a selected Publish instances'
+                                'Comment': 'Run offline compaction on Author and a selected Publish instances',
+                                'Parameters': {
+                                    'executionTimeout': ['14400']
+                                }
                             }
                         )
                     else:
@@ -1177,7 +1195,10 @@ def sns_message_processor(event, context):
                             {
                                 'InstanceIds': [author_primary_id, author_standby_id, publish_id],
                                 'DocumentName': task_document_mapping['offline-compaction-snapshot-full-set'],
-                                'Comment': 'Run offline compaction on Author and a selected Publish instances'
+                                'Comment': 'Run offline compaction on Author and a selected Publish instances',
+                                'Parameters': {
+                                    'executionTimeout': ['14400']
+                                }
                             }
                         )
                     # Defining DynamoDB State
@@ -1225,7 +1246,10 @@ def sns_message_processor(event, context):
                         {
                             'InstanceIds': [author_primary_id, publish_id],
                             'DocumentName': task_document_mapping['offline-snapshot-full-set'],
-                            'Comment': 'Run offline EBS snapshot on Author and a selected Publish instances'
+                            'Comment': 'Run offline EBS snapshot on Author and a selected Publish instances',
+                            'Parameters': {
+                                'executionTimeout': ['14400']
+                            }
                         }
                     )
                 else:
@@ -1233,7 +1257,10 @@ def sns_message_processor(event, context):
                         {
                             'InstanceIds': [author_primary_id, author_standby_id, publish_id],
                             'DocumentName': task_document_mapping['offline-snapshot-full-set'],
-                            'Comment': 'Run offline EBS snapshot on Author and a selected Publish instances'
+                            'Comment': 'Run offline EBS snapshot on Author and a selected Publish instances',
+                            'Parameters': {
+                                'executionTimeout': ['14400']
+                            }
                         }
                     )
 
@@ -1284,7 +1311,8 @@ def sns_message_processor(event, context):
                         'Comment': 'Start AEM service on Author primary instance',
                         'Parameters': {
                             'aemid': ['author'],
-                            'action': ['start']
+                            'action': ['start'],
+                            'executionTimeout': ['3600']
                         }
                     }
                 )
@@ -1336,7 +1364,8 @@ def sns_message_processor(event, context):
                         'Comment': 'Start AEM service on Author standby instances',
                         'Parameters': {
                             'aemid': ['author'],
-                            'action': ['start']
+                            'action': ['start'],
+                            'executionTimeout': ['3600']
                         }
                     }
                 )
@@ -1388,7 +1417,8 @@ def sns_message_processor(event, context):
                         'Comment': 'Stop AEM service on Publish instances',
                         'Parameters': {
                             'aemid': ['publish'],
-                            'action': ['start']
+                            'action': ['start'],
+                            'executionTimeout': ['3600']
                         }
                     }
                 )
@@ -1464,7 +1494,10 @@ def sns_message_processor(event, context):
                         {
                             'InstanceIds': [publish_id],
                             'DocumentName': task_document_mapping['wait-until-ready'],
-                            'Comment': 'Wait Until AEM Service is properly up on the selected publish instance'
+                            'Comment': 'Wait Until AEM Service is properly up on the selected publish instance',
+                            'Parameters': {
+                                'executionTimeout': ['3600']
+                            }
                         }
                     )
 
