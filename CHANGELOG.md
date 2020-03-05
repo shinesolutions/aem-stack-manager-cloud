@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 
 ### Changed
-- Add a filter to select AEM only snapshots for purge.
+- Add `AemId` tag filter when selecting snapshots for purge in order to ensure the clean up of AEM-only snapshots and not other application's
 
 ## 1.6.0 - 2020-02-28
 ### Added
