@@ -49,6 +49,13 @@ def purge_old_snapshots(params):
         }
     )
 
+    filters.append(
+        {
+            'Name': 'tag:AemId',
+            'Values': ['author', 'publish']
+        }
+    )
+
     # snapshots is a list
     snapshots = boto3.resource('ec2').snapshots.filter(Filters=filters)
 
