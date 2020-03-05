@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Changed
+- Add `AemId` tag filter when selecting snapshots for purge in order to ensure the clean up of AEM-only snapshots and not other application's
+
 ## 1.6.0 - 2020-02-28
 ### Added
 - Add ssm parameter `executionTimeout` to aem_offline_snapshot lambda
