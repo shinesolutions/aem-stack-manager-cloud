@@ -6,7 +6,7 @@ clean:
 	rm -rf stage
 
 deps:
-	pip install -r requirements.txt
+	# pip install -r requirements.txt
 
 lint:
 	shellcheck scripts/*.sh
