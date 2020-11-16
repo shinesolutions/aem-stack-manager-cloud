@@ -7,9 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Fixed
+- Fixed naming of suspended processes while aem_offline_snapshot lambda is running
+
 ## 1.9.0 - 2020-11-13
 ### Added
-- Add new process to suspend/resume ASG process `AZrebalance` while aem_offline_snapshot lambda is running [#45]
+- Add new process to suspend/resume ASG process `AZRebalance` while aem_offline_snapshot lambda is running [#45]
 
 ## 1.8.0 - 2020-03-06
 ### Changed

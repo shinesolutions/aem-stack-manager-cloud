@@ -198,7 +198,7 @@ def manage_autoscaling_standby(stack_prefix, action, **kwargs):
             AutoScalingGroupName=asg_name,
             ScalingProcesses=[
                 'AlarmNotification',
-                'AZrebalance'
+                'AZRebalance'
             ]
         )
         print('[{}] Finished updating ASG {} to suspend processes ...'.format(stack_prefix, asg_name))
@@ -237,7 +237,7 @@ def manage_autoscaling_standby(stack_prefix, action, **kwargs):
             AutoScalingGroupName=asg_name,
             ScalingProcesses=[
                 'AlarmNotification',
-                'AZrebalance'
+                'AZRebalance'
             ]
         )
         print('[{}] Finished updating ASG {} to resume suspended processes again ...'.format(stack_prefix, asg_name))
