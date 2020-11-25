@@ -76,7 +76,7 @@ def purge_old_snapshots(params):
 
     logger.info('Deleting {} {} snapshots older than {}'.format(len(old_snapshots), params['SnapshotType'], delta))
     for snapshot in old_snapshots:
-        print('Deleting snapshot {}'.format(snapshot.snapshot_id))
+        print(('Deleting snapshot {}'.format(snapshot.snapshot_id)))
         snapshot.delete()
         time.sleep(0.5)
 
