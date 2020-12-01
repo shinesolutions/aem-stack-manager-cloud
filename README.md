@@ -1,4 +1,4 @@
-[![Build Status](https://img.shields.io/travis/shinesolutions/aem-stack-manager-cloud.svg)](http://travis-ci.org/shinesolutions/aem-stack-manager-cloud)
+[![Build Status](https://github.com/shinesolutions/aem-stack-manager-cloud/workflows/CI/badge.svg)](https://github.com/shinesolutions/aem-stack-manager-cloud/actions?query=workflow%3ACI)
 [![Known Vulnerabilities](https://snyk.io/test/github/shinesolutions/aem-stack-manager-cloud/badge.svg)](https://snyk.io/test/github/shinesolutions/aem-stack-manager-cloud)
 
 # aem-stack-manager-cloud
