@@ -53,7 +53,7 @@ def instance_ids_by_tags(filters):
 
 def send_ssm_cmd(cmd_details):
     ssm_document = cmd_details['DocumentName']
-    print('Start calling SSM Document {} ...'.format(ssm_document))
+    print(('Start calling SSM Document {} ...'.format(ssm_document)))
     response = json.loads(
         json.dumps(
             ssm.send_command(
@@ -62,7 +62,7 @@ def send_ssm_cmd(cmd_details):
             cls=MyEncoder
             )
         )
-    print('Finished calling SSM Document {}.'.format(ssm_document))
+    print(('Finished calling SSM Document {}.'.format(ssm_document)))
     return response
 
 
@@ -193,7 +193,7 @@ def manage_autoscaling_standby(stack_prefix, action, **kwargs):
 
     # manage the instances standby mode
     if action == 'enter':
-        print('[{}] Start updating ASG {} to suspend processes ...'.format(stack_prefix, asg_name))
+        print(('[{}] Start updating ASG {} to suspend processes ...'.format(stack_prefix, asg_name)))
         autoscaling.suspend_processes(
             AutoScalingGroupName=asg_name,
             ScalingProcesses=[
@@ -201,38 +201,38 @@ def manage_autoscaling_standby(stack_prefix, action, **kwargs):
                 'AZRebalance'
             ]
         )
-        print('[{}] Finished updating ASG {} to suspend processes ...'.format(stack_prefix, asg_name))
+        print(('[{}] Finished updating ASG {} to suspend processes ...'.format(stack_prefix, asg_name)))
 
-        print('[{}] Start updating ASG {} to {} instances ...'.format(stack_prefix, asg_name, min_size))
+        print(('[{}] Start updating ASG {} to {} instances ...'.format(stack_prefix, asg_name, min_size)))
         autoscaling.update_auto_scaling_group(
             AutoScalingGroupName=asg_name,
             MinSize=min_size
         )
-        print('[{}] Finished updating ASG {} to {} instances.'.format(stack_prefix, asg_name, min_size))
+        print(('[{}] Finished updating ASG {} to {} instances.'.format(stack_prefix, asg_name, min_size)))
 
-        print('[{}] Start entering instance {} into standby in ASG {} ...'.format(stack_prefix, instance_ids, asg_name))
+        print(('[{}] Start entering instance {} into standby in ASG {} ...'.format(stack_prefix, instance_ids, asg_name)))
         autoscaling.enter_standby(
             InstanceIds=instance_ids,
             AutoScalingGroupName=asg_name,
             ShouldDecrementDesiredCapacity=True
         )
-        print('[{}] Finished entering instance {} into standby in ASG {}.'.format(stack_prefix, instance_ids, asg_name))
+        print(('[{}] Finished entering instance {} into standby in ASG {}.'.format(stack_prefix, instance_ids, asg_name)))
     elif action == 'exit':
-        print('[{}] Start exiting instance {} from standby in ASG {} ...'.format(stack_prefix, instance_ids, asg_name))
+        print(('[{}] Start exiting instance {} from standby in ASG {} ...'.format(stack_prefix, instance_ids, asg_name)))
         autoscaling.exit_standby(
             InstanceIds=instance_ids,
             AutoScalingGroupName=asg_name
         )
-        print('[{}] Finished exiting instance {} from standby in ASG {}.'.format(stack_prefix, instance_ids, asg_name))
+        print(('[{}] Finished exiting instance {} from standby in ASG {}.'.format(stack_prefix, instance_ids, asg_name)))
 
-        print('[{}] Start updating ASG {} to {} instances ...'.format(stack_prefix, asg_name, asg_max_size))
+        print(('[{}] Start updating ASG {} to {} instances ...'.format(stack_prefix, asg_name, asg_max_size)))
         autoscaling.update_auto_scaling_group(
             AutoScalingGroupName=asg_name,
             MinSize=min(asg_min_size + len(instance_ids), asg_max_size)
         )
-        print('[{}] Finished updating ASG {} to {} instances.'.format(stack_prefix, asg_name, asg_max_size))
+        print(('[{}] Finished updating ASG {} to {} instances.'.format(stack_prefix, asg_name, asg_max_size)))
 
-        print('[{}] Start updating ASG {} to resume suspended processes again ...'.format(stack_prefix, asg_name))
+        print(('[{}] Start updating ASG {} to resume suspended processes again ...'.format(stack_prefix, asg_name)))
         autoscaling.resume_processes(
             AutoScalingGroupName=asg_name,
             ScalingProcesses=[
@@ -240,7 +240,7 @@ def manage_autoscaling_standby(stack_prefix, action, **kwargs):
                 'AZRebalance'
             ]
         )
-        print('[{}] Finished updating ASG {} to resume suspended processes again ...'.format(stack_prefix, asg_name))
+        print(('[{}] Finished updating ASG {} to resume suspended processes again ...'.format(stack_prefix, asg_name)))
 
 def retrieve_tag_value(instance_id, tag_key):
     response = boto3.client('ec2').describe_tags(
@@ -289,24 +289,24 @@ def manage_lock_for_environment(table_name, lock, action):
                     'N': str(ttl)
                 }
             }
-            print('Try to lock DynamoDB Table {} ...'.format(table_name))
+            print(('Try to lock DynamoDB Table {} ...'.format(table_name)))
             dynamodb.put_item(
                 TableName=table_name,
                 Item=item,
                 ConditionExpression='attribute_not_exists(command_id)',
                 ReturnValues='NONE'
             )
-            print(
+            print((
                 'DynamoDB Table {} locked successfully.'.format(
                     table_name
                 )
-            )
+            ))
             succeeded = True
         except botocore.exceptions.ClientError:
             succeeded = False
 
     elif action == 'unlock':
-        print('Unlock DynamoDB Table {}'.format(table_name))
+        print(('Unlock DynamoDB Table {}'.format(table_name)))
         dynamodb.delete_item(
             TableName=table_name,
             Key={
@@ -342,13 +342,13 @@ def stack_health_check(stack_prefix, min_publish_instances):
     if type(min_publish_instances) is str:
         min_publish_instances = int(min_publish_instances)
 
-    print('[{}] Start checking Stack health ...'.format(stack_prefix))
+    print(('[{}] Start checking Stack health ...'.format(stack_prefix)))
 
     if (author_primary_count == 1 and
         author_standby_count == 1 and
         publish_count >= min_publish_instances):
         paired_publish_dispatcher_id = retrieve_tag_value(publish_instances[0], 'PairInstanceId')
-        print('[{}] Finished checking Stack health successfully.'.format(stack_prefix))
+        print(('[{}] Finished checking Stack health successfully.'.format(stack_prefix)))
         return {
           'author-primary': author_primary_instances[0],
           'author-standby': author_standby_instances[0],
@@ -359,8 +359,8 @@ def stack_health_check(stack_prefix, min_publish_instances):
         author_standby_count == 0 and
         publish_count >= min_publish_instances):
         paired_publish_dispatcher_id = retrieve_tag_value(publish_instances[0], 'PairInstanceId')
-        print('[{}] WARN: Found promoted Author Standby going to run offline-snapshot only on promoted Author instance.'.format(stack_prefix))
-        print('[{}] Finished checking Stack health successfully.'.format(stack_prefix))
+        print(('[{}] WARN: Found promoted Author Standby going to run offline-snapshot only on promoted Author instance.'.format(stack_prefix)))
+        print(('[{}] Finished checking Stack health successfully.'.format(stack_prefix)))
         return {
           'author-primary': promoted_author_standby_instances[0],
           'author-standby': 'Promoted',
@@ -741,7 +741,7 @@ def compact_remaining_publish_instances(context):
             'unlock'
         )
 
-        print('[{}] Offline compaction backup successfully'.format(stack_prefix))
+        print(('[{}] Offline compaction backup successfully'.format(stack_prefix)))
 
         response = {
             'status': 'Success'
@@ -752,13 +752,13 @@ def compact_remaining_publish_instances(context):
 
 def log_command_info(send_command=None, stack_prefix=None, instance_id=None, aem_component=None, command_id=None):
     if command_id is not None:
-        print('[{}/{}] Command ID: {} ...'.format(stack_prefix, aem_component, command_id))
-        print('[{}/{}] Finished sending command {}'.format(stack_prefix, aem_component, send_command))
+        print(('[{}/{}] Command ID: {} ...'.format(stack_prefix, aem_component, command_id)))
+        print(('[{}/{}] Finished sending command {}'.format(stack_prefix, aem_component, send_command)))
     elif stack_prefix is not None and send_command is not None:
-        print('[{}/{}] Start sending command {} for instance ids:'.format(stack_prefix, aem_component, send_command))
-        print('[{}/{}] {} ...'.format(stack_prefix, aem_component, instance_id))
+        print(('[{}/{}] Start sending command {} for instance ids:'.format(stack_prefix, aem_component, send_command)))
+        print(('[{}/{}] {} ...'.format(stack_prefix, aem_component, instance_id)))
     else:
-        print('[{}/{}] {} '.format(stack_prefix, aem_component, send_command))
+        print(('[{}/{}] {} '.format(stack_prefix, aem_component, send_command)))
 
 
 def sns_message_processor(event, context):
@@ -899,7 +899,7 @@ def sns_message_processor(event, context):
                     command_id=command_id
                 )
 
-                instance_info = {key: {'S': value} for (key, value) in instances.items()}
+                instance_info = {key: {'S': value} for (key, value) in list(instances.items())}
                 supplement = {
                     'InstanceInfo': instance_info,
                     'ExternalId': external_id
@@ -920,7 +920,7 @@ def sns_message_processor(event, context):
             # If Author Standby is promoted to Author Primary skip stop for Author Standby
             else:
                 author_primary_id = instances['author-primary']
-                instance_info = {key: {'S': value} for (key, value) in instances.items()}
+                instance_info = {key: {'S': value} for (key, value) in list(instances.items())}
                 supplement = {
                     'InstanceInfo': instance_info,
                     'ExternalId': external_id
@@ -1467,7 +1467,7 @@ def sns_message_processor(event, context):
                 # this is the success notification message
                 if task == 'offline-snapshot-full-set':
                     update_state_in_dynamodb(dynamodb_table, cmd_id, 'Success', message['eventTime'])
-                    print('[{}] Offline backup finished successfully'.format(stack_prefix))
+                    print(('[{}] Offline backup finished successfully'.format(stack_prefix)))
 
                     # move author-dispatcher instances out of standby
                     manage_autoscaling_standby(stack_prefix, 'exit', byComponent='author-dispatcher')
