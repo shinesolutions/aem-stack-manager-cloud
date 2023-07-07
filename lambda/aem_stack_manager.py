@@ -22,12 +22,6 @@ __license__ = 'Apache License, Version 2.0'
 logger = logging.getLogger(__name__)
 logger.setLevel(int(os.getenv('LOG_LEVEL', logging.INFO)))
 
-# AWS resources
-ssm = boto3.client('ssm')
-ec2 = boto3.client('ec2')
-s3 = boto3.client('s3')
-dynamodb = boto3.client('dynamodb')
-
 
 class MyEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -38,6 +32,7 @@ class MyEncoder(json.JSONEncoder):
 
 
 def instance_ids_by_tags(filters):
+    ec2 = boto3.client('ec2')
     response = ec2.describe_instances(
         Filters=filters
     )
@@ -51,6 +46,7 @@ def instance_ids_by_tags(filters):
 
 def send_ssm_cmd(cmd_details):
     logger.info(' calling ssm commands')
+    ssm = boto3.client('ssm')
     return json.loads(json.dumps(ssm.send_command(**cmd_details), cls=MyEncoder))
 
 
@@ -107,6 +103,7 @@ def put_state_in_dynamodb(table_name, command_id, environment, task, state, time
                      used more for debugging
       externalId: S, provided by external parties, like Jenkins/Bamboo job id
     """
+    dynamodb = boto3.client('dynamodb')
 
     # item ttl is set to 1 day
     ttl = (datetime.datetime.now() -
@@ -154,6 +151,7 @@ def put_state_in_dynamodb(table_name, command_id, environment, task, state, time
 
 # dynamodb is used to host state information
 def get_state_from_dynamodb(table_name, command_id):
+    dynamodb = boto3.client('dynamodb')
 
     item = dynamodb.get_item(
         TableName=table_name,
@@ -174,7 +172,7 @@ def get_state_from_dynamodb(table_name, command_id):
 
 
 def update_state_in_dynamodb(table_name, command_id, new_state, timestamp):
-
+    dynamodb = boto3.client('dynamodb')
     item_update = {
         'TableName': table_name,
         'Key': {
@@ -204,6 +202,7 @@ def sns_message_processor(event, context):
     # reading in config info from either s3 or within bundle
     bucket = os.getenv('S3_BUCKET')
     prefix = os.getenv('S3_PREFIX')
+    s3 = boto3.client('s3')
 
     if bucket is not None and prefix is not None:
         config_file = '/tmp/config.json'
