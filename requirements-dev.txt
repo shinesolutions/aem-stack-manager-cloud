@@ -1,4 +1,4 @@
 moto==4.0.13
 mock==5.0.2
-boto3==1.26.162
-botocore==1.29.162
+boto3==1.23.10
+botocore==1.23.10
