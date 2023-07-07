@@ -922,10 +922,10 @@ def sns_message_processor(event, context):
 
             elif (
                 state == "STOP_PUBLISH"
-                and task != "offline-snapshot-full-set"
+                and task == "offline-compaction-snapshot-full-set"
                 or (
                     state == "STOP_PREVIEW_PUBLISH"
-                    and task != "offline-snapshot-full-set"
+                    and task == "offline-compaction-snapshot-full-set"
                 )
             ):
                 # Defining DynamoDB State
@@ -1113,7 +1113,14 @@ def sns_message_processor(event, context):
 
             elif state == "COMPACT_REMAINING_PUBLISHERS":
                 dispatcher_ids = item["Item"]["dispatcher_ids"]["SS"]
-                instance_ids = [item["Item"]["publish_ids"]["SS"]]
+                publish_instance_ids = item["Item"]["publish_ids"]["SS"]
+                
+                supplement = {
+                    "PublishIds": publish_instance_ids,
+                    "DispatcherIds": dispatcher_ids,
+                }
+
+                instance_ids = publish_instance_ids
 
                 put_state = state
                 sub_state = item["Item"]["sub_state"]["S"]
@@ -1128,10 +1135,17 @@ def sns_message_processor(event, context):
                     preview_publish_instance_ids = item["Item"]["preview_publish_ids"][
                         "SS"
                     ]
-                    instance_ids.append(preview_publish_instance_ids)
+                    instance_ids = instance_ids + preview_publish_instance_ids
                     aem_component = aem_component + "/preview-publish"
+                    
+                    supplement_preview = {
+                        "PreviewPublishIds": item["Item"]["preview_publish_ids"]["SS"],
+                        "PreviewDispatcherIds": item["Item"]["preview_dispatcher_ids"]["SS"],
+                        
+                    }
+                    supplement = {**supplement, **supplement_preview}
 
-                if sub_state == "PUBLISH_READY":
+                if sub_state == "PUBLISH_READY" or sub_state == "PUBLISH_PREVIEW_READY":
                     manage_autoscaling_standby(
                         stack_prefix, "enter", byInstanceIds=dispatcher_ids
                     )
@@ -1188,11 +1202,11 @@ def sns_message_processor(event, context):
 
                     return response
 
-                supplement = {
-                    "SubState": put_sub_state,
-                    "PublishIds": item["Item"]["publish_ids"]["SS"],
-                    "DispatcherIds": item["Item"]["dispatcher_ids"]["SS"],
+                supplement_sub_state = {
+                    "SubState": put_sub_state
+                    
                 }
+                supplement = {**supplement, **supplement_sub_state}
 
             else:
                 raise RuntimeError(f"Unexpected state {state} for {cmd_id}")
