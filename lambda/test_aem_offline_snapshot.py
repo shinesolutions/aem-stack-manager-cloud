@@ -33,13 +33,29 @@ from moto.core import patch_client
 from test_aws_helper import AwsHelper
 os.environ["AWS_REGION"] = "ap-southeast-2"
 
-from aem_offline_snapshot import sns_message_processor
+def aws_credentials():
+    """Mocked AWS Credentials for moto."""
+    os.environ["AWS_ACCESS_KEY_ID"] = "testing"
+    os.environ["AWS_SECRET_ACCESS_KEY"] = "testing"
+    os.environ["AWS_SECURITY_TOKEN"] = "testing"
+    os.environ["AWS_SESSION_TOKEN"] = "testing"
+    os.environ["AWS_DEFAULT_REGION"] = "ap-southeast-2"
 
+aws_credentials()
+
+from aem_offline_snapshot import sns_message_processor
 
 class TestUtils(unittest.TestCase):
     """
     Moto mock SsmManager tests
     """
+    def aws_credentials(self):
+        """Mocked AWS Credentials for moto."""
+        os.environ["AWS_ACCESS_KEY_ID"] = "testing"
+        os.environ["AWS_SECRET_ACCESS_KEY"] = "testing"
+        os.environ["AWS_SECURITY_TOKEN"] = "testing"
+        os.environ["AWS_SESSION_TOKEN"] = "testing"
+        os.environ["AWS_DEFAULT_REGION"] = "ap-southeast-2"
 
     @mock_autoscaling
     @mock_ec2
@@ -51,6 +67,7 @@ class TestUtils(unittest.TestCase):
     @mock_s3
     def test_offline_snapshot_standard_architecture(self):
         # Preparation
+        self.aws_credentials()
         stack_prefix = "aoc-fs"
         os.environ["DDB_TABLE_NAME"] = "aoc-sm"
         os.environ["S3_BUCKET"] = "aoc"
@@ -322,6 +339,7 @@ class TestUtils(unittest.TestCase):
     @mock_s3
     def test_offline_snapshot_preview_architecture(self):
         # Preparation
+        self.aws_credentials()
         stack_prefix = "aoc-fs-preview"
         os.environ["DDB_TABLE_NAME"] = "aoc-sm-preview"
         os.environ["S3_BUCKET"] = "aoc-preview"
@@ -659,6 +677,7 @@ class TestUtils(unittest.TestCase):
     @mock_s3
     def test_offline_snapshot_standard_architecture_promoted_standby(self):
         # Preparation
+        self.aws_credentials()
         stack_prefix = "aoc-fs-promoted-author"
         os.environ["DDB_TABLE_NAME"] = "aoc-sm-promoted-author"
         os.environ["S3_BUCKET"] = "aoc-preview"
@@ -870,6 +889,7 @@ class TestUtils(unittest.TestCase):
     @mock_s3
     def test_offline_snapshot_preview_architecture_promoted_standby(self):
         # Preparation
+        self.aws_credentials()
         stack_prefix = "aoc-fs-preview-promoted-standby"
         os.environ["DDB_TABLE_NAME"] = "aoc-sm-preview-promoted-standby"
         os.environ["S3_BUCKET"] = "aoc-preview"
@@ -1144,6 +1164,7 @@ class TestUtils(unittest.TestCase):
     @mock_s3
     def test_offline_compaction_snapshot_standard_architecture(self):
         # Preparation
+        self.aws_credentials()
         stack_prefix = "aoc-fs"
         os.environ["DDB_TABLE_NAME"] = "aoc-sm"
         os.environ["S3_BUCKET"] = "aoc"
@@ -1639,6 +1660,7 @@ class TestUtils(unittest.TestCase):
     @mock_s3
     def test_offline_compaction_snapshot_preview_architecture(self):
         # Preparation
+        self.aws_credentials()
         stack_prefix = "aoc-fs-preview"
         os.environ["DDB_TABLE_NAME"] = "aoc-sm-preview"
         os.environ["S3_BUCKET"] = "aoc-preview"
@@ -2201,6 +2223,7 @@ class TestUtils(unittest.TestCase):
     @mock_s3
     def test_offline_compaction_snapshot_standard_architecture_promoted_standby(self):
         # Preparation
+        self.aws_credentials()
         stack_prefix = "aoc-fs-promoted-author"
         os.environ["DDB_TABLE_NAME"] = "aoc-sm-promoted-author"
         os.environ["S3_BUCKET"] = "aoc-preview"
@@ -2604,6 +2627,7 @@ class TestUtils(unittest.TestCase):
     @mock_s3
     def test_offline_compaction_snapshot_preview_architecture_promoted_standby(self):
         # Preparation
+        self.aws_credentials()
         stack_prefix = "aoc-fs-preview-promoted-standby"
         os.environ["DDB_TABLE_NAME"] = "aoc-sm-preview-promoted-standby"
         os.environ["S3_BUCKET"] = "aoc-preview"
