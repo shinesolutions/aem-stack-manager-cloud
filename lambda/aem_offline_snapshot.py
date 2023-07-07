@@ -24,11 +24,12 @@ logger.setLevel(int(os.getenv("LOG_LEVEL", logging.INFO)))
 
 
 # AWS resources
-ssm = boto3.client("ssm")
-ec2 = boto3.client("ec2")
-s3 = boto3.client("s3")
-dynamodb = boto3.client("dynamodb")
-sns = boto3.client("sns")
+aws_region = os.getenv("AWS_REGION")
+ssm = boto3.client("ssm", region_name=aws_region)
+ec2 = boto3.client("ec2", region_name=aws_region)
+s3 = boto3.client("s3", region_name=aws_region)
+dynamodb = boto3.client("dynamodb", region_name=aws_region)
+sns = boto3.client("sns", region_name=aws_region)
 
 
 class MyEncoder(json.JSONEncoder):
@@ -1114,7 +1115,7 @@ def sns_message_processor(event, context):
             elif state == "COMPACT_REMAINING_PUBLISHERS":
                 dispatcher_ids = item["Item"]["dispatcher_ids"]["SS"]
                 publish_instance_ids = item["Item"]["publish_ids"]["SS"]
-                
+
                 supplement = {
                     "PublishIds": publish_instance_ids,
                     "DispatcherIds": dispatcher_ids,
@@ -1137,11 +1138,11 @@ def sns_message_processor(event, context):
                     ]
                     instance_ids = instance_ids + preview_publish_instance_ids
                     aem_component = aem_component + "/preview-publish"
-                    
+
                     supplement_preview = {
                         "PreviewPublishIds": item["Item"]["preview_publish_ids"]["SS"],
                         "PreviewDispatcherIds": item["Item"]["preview_dispatcher_ids"]["SS"],
-                        
+
                     }
                     supplement = {**supplement, **supplement_preview}
 
@@ -1204,7 +1205,7 @@ def sns_message_processor(event, context):
 
                 supplement_sub_state = {
                     "SubState": put_sub_state
-                    
+
                 }
                 supplement = {**supplement, **supplement_sub_state}
 
