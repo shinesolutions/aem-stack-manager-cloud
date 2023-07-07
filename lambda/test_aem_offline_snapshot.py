@@ -12,6 +12,8 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     Class to test the serverless orchestration
 """
+os.environ["AWS_REGION"] = "ap-southeast-2"
+
 import json
 import os
 import datetime
@@ -2186,7 +2188,7 @@ class TestUtils(unittest.TestCase):
             ]
         }
         response = sns_message_processor(event, context)
-        
+
         assert response == {"status": "Success"}
 
     @mock_autoscaling
@@ -2398,7 +2400,7 @@ class TestUtils(unittest.TestCase):
         }
         sns_message_processor(event, context)
 
-        # compact remaining publishers 
+        # compact remaining publishers
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
