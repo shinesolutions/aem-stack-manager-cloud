@@ -12,8 +12,6 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     Class to test the serverless orchestration
 """
-os.environ["AWS_REGION"] = "ap-southeast-2"
-
 import json
 import os
 import datetime
@@ -33,6 +31,8 @@ from moto import (
 )
 from moto.core import patch_client
 from test_aws_helper import AwsHelper
+os.environ["AWS_REGION"] = "ap-southeast-2"
+
 from aem_offline_snapshot import sns_message_processor
 
 
