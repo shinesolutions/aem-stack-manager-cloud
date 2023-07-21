@@ -400,7 +400,7 @@ def stack_health_check(
     ):
         preview_publish_instance_id = preview_publish_instances[0]
         paired_preview_publish_dispatcher_id = retrieve_tag_value(
-            preview_publish_instance_id, "PairInstanceId"
+            preview_publish_instance_id, "PreviewPairInstanceId"
         )
     elif min_preview_publish_instance == 0:
         preview_publish_instance_id = "False"
@@ -553,7 +553,7 @@ def get_remaining_preview_publish_dispatcher_pairs(
     preview_publish_dispatcher_ids = []
     for preview_publish_id in preview_publish_ids:
         preview_publish_dispatcher_id = retrieve_tag_value(
-            preview_publish_id, "PairInstanceId"
+            preview_publish_id, "PreviewPairInstanceId"
         )
         preview_publish_dispatcher_ids.append(preview_publish_dispatcher_id)
 
