@@ -365,9 +365,7 @@ def stack_health_check(
             )
             return None
     else:
-        logger.error(
-            "Found %s publish instances. Unhealthy stack.", publish_count
-        )
+        logger.error("Found %s publish instances. Unhealthy stack.", publish_count)
         return None
 
     if promoted_author_standby_instances_count == 1:
@@ -407,7 +405,8 @@ def stack_health_check(
         paired_preview_publish_dispatcher_id = "False"
     else:
         logger.error(
-            "Found %s preview-publish instances. Unhealthy stack.", preview_publish_count
+            "Found %s preview-publish instances. Unhealthy stack.",
+            preview_publish_count,
         )
 
         return None
@@ -757,11 +756,8 @@ def sns_message_processor(event, context):
                     dynamodb_table, stack_prefix + "_backup_lock", "trylock"
                 )
                 if not locked:
-                    logger.warn(
+                    logger.error(
                         "Cannot have two offline snapshots/compactions run in parallel"
-                    )
-                    raise RuntimeError(
-                        "Another offline snapshot backup/compaction backup is running"
                     )
 
             except RuntimeError:
@@ -783,9 +779,6 @@ def sns_message_processor(event, context):
                     message_id,
                     **supplement,
                 )
-
-                # rethrow to fail the execution
-                raise
 
             # place both author-dispather in standby mode after health check
             manage_autoscaling_standby(
@@ -890,7 +883,7 @@ def sns_message_processor(event, context):
                     dynamodb_table, stack_prefix + "_backup_lock", "unlock"
                 )
 
-                raise RuntimeError(f"Command {cmd_id} failed.")
+                logger.error("Command %s failed.", cmd_id)
 
             if state == "STOP_AUTHOR_STANDBY":
                 instance_ids = [author_primary_id]
@@ -1141,8 +1134,9 @@ def sns_message_processor(event, context):
 
                     supplement_preview = {
                         "PreviewPublishIds": item["Item"]["preview_publish_ids"]["SS"],
-                        "PreviewDispatcherIds": item["Item"]["preview_dispatcher_ids"]["SS"],
-
+                        "PreviewDispatcherIds": item["Item"]["preview_dispatcher_ids"][
+                            "SS"
+                        ],
                     }
                     supplement = {**supplement, **supplement_preview}
 
@@ -1203,14 +1197,11 @@ def sns_message_processor(event, context):
 
                     return response
 
-                supplement_sub_state = {
-                    "SubState": put_sub_state
-
-                }
+                supplement_sub_state = {"SubState": put_sub_state}
                 supplement = {**supplement, **supplement_sub_state}
 
             else:
-                raise RuntimeError(f"Unexpected state {state} for {cmd_id}")
+                logger.error("Unexpected state %s for command %s.", state, cmd_id)
 
         # Logging pre-infos
         log_command_info(

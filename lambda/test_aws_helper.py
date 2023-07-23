@@ -636,7 +636,7 @@ class AwsHelper:
             # Tag EC2 instance with Orchestration Completion Tag
             self.ec2_tagger_orchestration_completed(instance)
             # Tag EC2 instance with EC2 information
-            self.ec2_tagger_publish(
+            self.ec2_tagger_preview_publish(
                 instance,
                 instance_name,
                 stack_prefix,
@@ -815,6 +815,30 @@ class AwsHelper:
             "StackPrefix": stack_prefix,
             "Component": component,
             "PairInstanceId": publish_dispatcher_instance_id,
+        }
+        for tag in tag_map:
+            response = self.ec2_client().create_tags(
+                Resources=[instance_id], Tags=[{"Key": tag, "Value": tag_map[tag]}]
+            )
+
+        return response
+
+    def ec2_tagger_preview_publish(
+        self,
+        instance_id,
+        instance_name,
+        stack_prefix,
+        component,
+        publish_dispatcher_instance_id,
+    ):
+        """
+        Tag EC2 information to an EC2 instance
+        """
+        tag_map = {
+            "Name": instance_name,
+            "StackPrefix": stack_prefix,
+            "Component": component,
+            "PreviewPairInstanceId": publish_dispatcher_instance_id,
         }
         for tag in tag_map:
             response = self.ec2_client().create_tags(
