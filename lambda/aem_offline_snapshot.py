@@ -310,7 +310,11 @@ def manage_lock_for_environment(table_name, lock, action):
             )
             logger.info("DynamoDB Table %s locked successfully.", table_name)
             succeeded = True
-        except botocore.exceptions.ClientError:
+        except botocore.exceptions.ClientError as err:
+            logger.error(
+                "Error Updating Dynamo %s",
+                str(err),
+            )
             succeeded = False
 
     elif action == "unlock":
