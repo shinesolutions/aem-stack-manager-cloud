@@ -1,17 +1,21 @@
 version ?= 1.9.2-pre.0
 
-ci: clean deps lint package
+ci: clean deps lint test package
 
 clean:
 	rm -rf stage
 
 deps:
-	# pip install -r requirements.txt
+	pip install -r requirements-dev.txt
 
 lint:
 	shellcheck scripts/*.sh
 	# TODO: re-enable when all Pylint errors are cleaned up
 	# pylint lambda/*.py
+
+
+test:
+	pytest --log-cli-level=info
 
 package:
 	mkdir -p stage

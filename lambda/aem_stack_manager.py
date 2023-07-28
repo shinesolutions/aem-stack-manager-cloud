@@ -23,10 +23,11 @@ logger = logging.getLogger(__name__)
 logger.setLevel(int(os.getenv('LOG_LEVEL', logging.INFO)))
 
 # AWS resources
-ssm = boto3.client('ssm')
-ec2 = boto3.client('ec2')
-s3 = boto3.client('s3')
-dynamodb = boto3.client('dynamodb')
+aws_region = os.getenv("AWS_REGION")
+ssm = boto3.client('ssm', region_name=aws_region)
+ec2 = boto3.client('ec2', region_name=aws_region)
+s3 = boto3.client('s3', region_name=aws_region)
+dynamodb = boto3.client('dynamodb', region_name=aws_region)
 
 
 class MyEncoder(json.JSONEncoder):

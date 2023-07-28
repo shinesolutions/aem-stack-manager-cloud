@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+- Added test cases for aem_offline_snapshopt
+
+### Changed
+- Updated Offline Snapshot to support offline backup & offline compaction of preview architecture
+- Updated Makefile target `ci` to run tests
+
 ## 1.9.1 - 2020-11-16
 ### Fixed
 - Fixed naming of suspended processes while aem_offline_snapshot lambda is running
