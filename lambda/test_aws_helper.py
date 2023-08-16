@@ -175,7 +175,6 @@ class AwsHelper:
         sm_service_iam_role_arn,
         ddb_table_name,
         ssm_document_name,
-        min_preview_instances,
     ):
         config = {
             "ec2_run_command": {
@@ -218,7 +217,6 @@ class AwsHelper:
             },
             "offline_snapshot": {
                 "min-publish-instances": "1",
-                "min-preview-publish-instances": min_preview_instances,
                 "sns-topic-arn": sns_topic_arn,
             },
             "cw_stream_s3": {
@@ -237,7 +235,6 @@ class AwsHelper:
         sm_service_iam_role_arn,
         ddb_table_name,
         ssm_document_name,
-        min_preview_instances,
     ):
         sm_config = self.create_sm_config(
             s3_bucket_name,
@@ -246,7 +243,6 @@ class AwsHelper:
             sm_service_iam_role_arn,
             ddb_table_name,
             ssm_document_name,
-            min_preview_instances,
         )
 
         response = self.s3_client().put_object(
@@ -280,7 +276,6 @@ class AwsHelper:
             sm_service_iam_role_arn,
             ddb_table_name,
             ssm_document_name,
-            0,
         )
 
     def setup_stack_manager_preview_infrastructure(self):
@@ -304,7 +299,6 @@ class AwsHelper:
             sm_service_iam_role_arn,
             ddb_table_name,
             ssm_document_name,
-            1,
         )
 
     def setup_standard_infrastructure(self):
