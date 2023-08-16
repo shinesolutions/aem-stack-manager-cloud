@@ -5,19 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 2.1.0 - 2023-08-16
 ### Removed
 - Removed preview config parameter `min-preview-publish-instances`, as if we want to proceed with offline-snapshot even if no preview instance is found.
 
 ## 2.0.0 - 2023-07-28
-
 ### Added
 - Added test cases for aem_offline_snapshopt
 
 ### Changed
 - Updated Offline Snapshot to support offline backup & offline compaction of preview architecture
 - Updated Makefile target `ci` to run tests
-- Improved DDB Client error logging #50
+- Improved DDB Client error logging [#50]
 
 ## 1.9.1 - 2020-11-16
 ### Fixed
