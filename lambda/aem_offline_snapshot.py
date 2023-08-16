@@ -326,7 +326,7 @@ def manage_lock_for_environment(table_name, lock, action):
 
 
 def stack_health_check(
-    stack_prefix, min_publish_instances, min_preview_publish_instance
+    stack_prefix, min_publish_instances
 ):
     """
     Simple AEM stack health check based on the number of author-primary,
@@ -350,10 +350,6 @@ def stack_health_check(
     # make sure min_publish_instances is integer
     if isinstance(min_publish_instances, str):
         min_publish_instances = int(min_publish_instances)
-
-    # make sure min_preview_publish_instance is integer
-    if isinstance(min_preview_publish_instance, str):
-        min_preview_publish_instance = int(min_preview_publish_instance)
 
     logger.info("[%s] Start checking Stack health ...", stack_prefix)
 
@@ -397,23 +393,16 @@ def stack_health_check(
         return None
 
     if (
-        min_preview_publish_instance > 0
-        and preview_publish_count >= min_preview_publish_instance
+        preview_publish_count >= 1
     ):
         preview_publish_instance_id = preview_publish_instances[0]
         paired_preview_publish_dispatcher_id = retrieve_tag_value(
             preview_publish_instance_id, "PreviewPairInstanceId"
         )
-    elif min_preview_publish_instance == 0:
+    else:
         preview_publish_instance_id = "False"
         paired_preview_publish_dispatcher_id = "False"
-    else:
-        logger.error(
-            "Found %s preview-publish instances. Unhealthy stack.",
-            preview_publish_count,
-        )
 
-        return None
     logger.info("[%s] Finished checking Stack health successfully.", stack_prefix)
 
     return {
@@ -746,11 +735,8 @@ def sns_message_processor(event, context):
                 min_publish_instance = int(
                     offline_snapshot_config["min-publish-instances"]
                 )
-                min_preview_publish_instance = int(
-                    offline_snapshot_config["min-preview-publish-instances"]
-                )
                 instances = stack_health_check(
-                    stack_prefix, min_publish_instance, min_preview_publish_instance
+                    stack_prefix, min_publish_instance
                 )
                 if instances is None:
                     raise RuntimeError("Unhealthy Stack")

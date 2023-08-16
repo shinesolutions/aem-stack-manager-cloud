@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
+### Removed
+- Removed preview config parameter `min-preview-publish-instances`, as if we want to proceed with offline-snapshot even if no preview instance is found.
 
 ## 2.0.0 - 2023-07-28
 
