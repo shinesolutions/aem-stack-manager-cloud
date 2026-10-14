@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Simplify GitHub Actions release workflows to not use custom action
 - Use pip-tools for managing Python dependencies
+- Uplift test harness to work with moto 5+
 
 ## 2.1.0 - 2023-08-16
 ### Removed
