@@ -8,9 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 ### Changed
 - Simplify GitHub Actions release workflows to not use custom action
-
-### Removed
-- Removed preview config parameter `min-preview-publish-instances`, as if we want to proceed with offline-snapshot even if no preview instance is found.
+- Use pip-tools for managing Python dependencies
 
 ## 2.1.0 - 2023-08-16
 ### Removed

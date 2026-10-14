@@ -1,12 +1,25 @@
 version ?= 2.1.1-pre.0
 
+define python_venv
+	. .venv/bin/activate && $(1)
+endef
+
 ci: clean deps lint test package
 
 clean:
 	rm -rf stage
 
 deps:
-	pip install -r requirements-dev.txt
+	python3 -m venv .venv
+	$(call python_venv,python3 -m pip install -r requirements.txt)
+
+deps-upgrade:
+	python3 -m venv .venv
+	$(call python_venv,python3 -m pip install -r requirements-dev.txt)
+	$(call python_venv,pip-compile --upgrade)
+
+rmdeps:
+	rm -rf .venv
 
 lint:
 	shellcheck scripts/*.sh
