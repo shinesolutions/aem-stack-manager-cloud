@@ -8,6 +8,8 @@ ci: clean deps lint test package
 
 clean:
 	rm -rf stage
+	rm -rf .venv
+	rm -rf .pytest_cache
 
 deps:
 	python3 -m venv .venv
@@ -28,7 +30,8 @@ lint:
 
 
 test:
-	pytest --log-cli-level=info
+	python3 -m venv .venv
+	$(call python_venv,pytest --log-cli-level=info)
 
 package:
 	mkdir -p stage
