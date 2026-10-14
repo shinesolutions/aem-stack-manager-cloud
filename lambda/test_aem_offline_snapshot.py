@@ -86,7 +86,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -118,7 +118,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -150,7 +150,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -182,7 +182,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -214,7 +214,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -246,7 +246,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -278,7 +278,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -350,7 +350,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -382,7 +382,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -414,7 +414,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -446,7 +446,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -478,7 +478,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -510,7 +510,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -542,7 +542,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -574,7 +574,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -606,7 +606,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -677,7 +677,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -710,7 +710,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -742,7 +742,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -774,7 +774,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -806,7 +806,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -878,7 +878,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -910,7 +910,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -942,7 +942,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -974,7 +974,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1006,7 +1006,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1038,7 +1038,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1070,7 +1070,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1141,7 +1141,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1173,7 +1173,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1205,7 +1205,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1237,7 +1237,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1269,7 +1269,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1301,7 +1301,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1333,7 +1333,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1365,7 +1365,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1397,7 +1397,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1429,7 +1429,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1469,7 +1469,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1509,7 +1509,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1549,7 +1549,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1629,7 +1629,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1661,7 +1661,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1693,7 +1693,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1725,7 +1725,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1757,7 +1757,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1789,7 +1789,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1821,7 +1821,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1853,7 +1853,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1885,7 +1885,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1917,7 +1917,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1949,7 +1949,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1981,7 +1981,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2021,7 +2021,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2061,7 +2061,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2101,7 +2101,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2181,7 +2181,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2214,7 +2214,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2246,7 +2246,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2278,7 +2278,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2310,7 +2310,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2342,7 +2342,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2374,7 +2374,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2414,7 +2414,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2454,7 +2454,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2494,7 +2494,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2574,7 +2574,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2606,7 +2606,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2638,7 +2638,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2670,7 +2670,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2702,7 +2702,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2734,7 +2734,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2766,7 +2766,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2798,7 +2798,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2830,7 +2830,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2870,7 +2870,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2910,7 +2910,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2950,7 +2950,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
