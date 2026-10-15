@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Fix 'Select' as "ALL_ATTRIBUTES" combined with a ProjectionExpression is invalid
+- Fix pylint findings in aem_offline_snapshot.py
 
 ## 2.1.0 - 2023-08-16
 ### Removed
