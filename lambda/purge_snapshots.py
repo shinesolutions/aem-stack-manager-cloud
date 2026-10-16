@@ -5,11 +5,11 @@ Lambda function to manage AEM Stack resources.
 """
 
 import os
-import boto3
 import logging
 import datetime
 import re
 import time
+import boto3
 
 
 __author__ = 'Andy Wang (andy.wang@shinesolutions.com)'
@@ -19,10 +19,23 @@ __license__ = 'Apache License, Version 2.0'
 
 # setting up logger
 logger = logging.getLogger(__name__)
-logger.setLevel(int(os.getenv('LOG_LEVEL', logging.INFO)))
+logger.setLevel(int(os.getenv('LOG_LEVEL', str(logging.INFO))))
 
 
 def purge_old_snapshots(params):
+    """
+    Delete completed snapshots that are older than the requested age.
+
+    Snapshots are matched on the optional 'StackPrefix' tag, the 'SnapshotType'
+    tag and an 'AemId' tag of author or publish.
+
+    Args:
+        params: dict with 'SnapshotType', 'Age' (e.g. 2d, 12h, 1w) and
+            optionally 'StackPrefix'.
+
+    Raises:
+        RuntimeError: if the unit of 'Age' is not supported.
+    """
 
     filters = [
         {
@@ -74,14 +87,25 @@ def purge_old_snapshots(params):
     now = datetime.datetime.utcnow()
     old_snapshots = [snapshot for snapshot in snapshots if (now - snapshot.start_time.replace(tzinfo=None)) > delta]
 
-    logger.info('Deleting {} {} snapshots older than {}'.format(len(old_snapshots), params['SnapshotType'], delta))
+    logger.info('Deleting %d %s snapshots older than %s', len(old_snapshots), params['SnapshotType'], delta)
     for snapshot in old_snapshots:
-        print(('Deleting snapshot {}'.format(snapshot.snapshot_id)))
+        print(f'Deleting snapshot {snapshot.snapshot_id}')
         snapshot.delete()
         time.sleep(0.5)
 
 
-def handler(event, context):
+def handler(event, context):  # pylint: disable=unused-argument
+    """
+    Lambda entry point that purges old snapshots.
+
+    Args:
+        event: dict with 'SnapshotType' (live, offline or orchestration),
+            'Age' in the form <number>[h|d|w] and optionally 'StackPrefix'.
+        context: Lambda context object, not used.
+
+    Raises:
+        RuntimeError: if 'SnapshotType' or 'Age' is missing or invalid.
+    """
 
     if 'SnapshotType' not in event or event['SnapshotType'] not in ['live', 'offline', 'orchestration']:
         logger.error('SnapshotType [live|offline] must be specified')
