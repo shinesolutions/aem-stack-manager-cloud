@@ -25,8 +25,7 @@ rmdeps:
 
 lint:
 	shellcheck scripts/*.sh
-	# TODO: re-enable when all Pylint errors are cleaned up
-	# pylint lambda/*.py
+	pylint lambda/*.py
 
 
 test:
