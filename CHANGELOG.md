@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix pylint findings in aem_task_query.py
 - Fix pylint findings in cloudwatch_logs_s3_stream.py
 - Fix pylint findings in purge_snapshots.py
+- Fix pylint findings in test_aem_offline_snapshot.py
 
 ## 2.1.0 - 2023-08-16
 ### Removed

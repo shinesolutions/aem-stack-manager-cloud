@@ -1,6 +1,5 @@
 # pylint: disable=C0301
 # pylint: disable=C0302
-# pylint: disable=R0201
 # pylint: disable=R0904
 # pylint: disable=R0913
 # pylint: disable=R0914
@@ -12,12 +11,9 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     Class to test the serverless orchestration
 """
-import json
 import os
-import datetime
 import unittest
-from mock import patch, PropertyMock
-from moto import mock_aws
+from moto import mock_aws # pylint: disable=import-error
 from test_aws_helper import AwsHelper
 os.environ["AWS_REGION"] = "ap-southeast-2"
 
@@ -31,7 +27,8 @@ def aws_credentials():
 
 aws_credentials()
 
-from aem_offline_snapshot import sns_message_processor
+# Must be imported after aws_credentials() as the module reads AWS config at import time
+from aem_offline_snapshot import sns_message_processor  # pylint: disable=wrong-import-position
 
 class TestUtils(unittest.TestCase):
     """
@@ -47,6 +44,7 @@ class TestUtils(unittest.TestCase):
 
     @mock_aws
     def test_offline_snapshot_standard_architecture(self):
+        """Test offline snapshot standard architecture."""
         # Preparation
         self.aws_credentials()
         stack_prefix = "aoc-fs"
@@ -310,6 +308,7 @@ class TestUtils(unittest.TestCase):
 
     @mock_aws
     def test_offline_snapshot_preview_architecture(self):
+        """Test offline snapshot preview architecture."""
         # Preparation
         self.aws_credentials()
         stack_prefix = "aoc-fs-preview"
@@ -637,6 +636,7 @@ class TestUtils(unittest.TestCase):
 
     @mock_aws
     def test_offline_snapshot_standard_architecture_promoted_standby(self):
+        """Test offline snapshot standard architecture promoted standby."""
         # Preparation
         self.aws_credentials()
         stack_prefix = "aoc-fs-promoted-author"
@@ -838,6 +838,7 @@ class TestUtils(unittest.TestCase):
 
     @mock_aws
     def test_offline_snapshot_preview_architecture_promoted_standby(self):
+        """Test offline snapshot preview architecture promoted standby."""
         # Preparation
         self.aws_credentials()
         stack_prefix = "aoc-fs-preview-promoted-standby"
@@ -1102,6 +1103,7 @@ class TestUtils(unittest.TestCase):
 
     @mock_aws
     def test_offline_compaction_snapshot_standard_architecture(self):
+        """Test offline compaction snapshot standard architecture."""
         # Preparation
         self.aws_credentials()
         stack_prefix = "aoc-fs"
@@ -1589,6 +1591,7 @@ class TestUtils(unittest.TestCase):
 
     @mock_aws
     def test_offline_compaction_snapshot_preview_architecture(self):
+        """Test offline compaction snapshot preview architecture."""
         # Preparation
         self.aws_credentials()
         stack_prefix = "aoc-fs-preview"
@@ -2141,6 +2144,7 @@ class TestUtils(unittest.TestCase):
 
     @mock_aws
     def test_offline_compaction_snapshot_standard_architecture_promoted_standby(self):
+        """Test offline compaction snapshot standard architecture promoted standby."""
         # Preparation
         self.aws_credentials()
         stack_prefix = "aoc-fs-promoted-author"
@@ -2534,6 +2538,7 @@ class TestUtils(unittest.TestCase):
 
     @mock_aws
     def test_offline_compaction_snapshot_preview_architecture_promoted_standby(self):
+        """Test offline compaction snapshot preview architecture promoted standby."""
         # Preparation
         self.aws_credentials()
         stack_prefix = "aoc-fs-preview-promoted-standby"
