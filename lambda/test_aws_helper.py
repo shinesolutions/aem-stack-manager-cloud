@@ -926,19 +926,6 @@ class AwsHelper:
 
         return self.get_ec2_info_by_id(instance_id)
 
-    def create_volume(self, instance_id):
-        """
-        Create EC2 Volume
-        """
-        response = self.get_ec2_info_by_id(instance_id)
-        availability_zone = response["AvailabilityZone"]
-
-        # Get EC2 Snapshot to create the volume from
-        snapshot_id = self.get_snapshot_id()
-        response = self.create_volume(snapshot_id, availability_zone)
-
-        return response["VolumeId"]
-
     def get_snapshot_id(self):
         """
         Get a Snapshot ID
@@ -967,10 +954,12 @@ class AwsHelper:
         :return List of Boto3 EC2 client create_tags responses
         """
         response = []
-        for tag in tag_map:
+        for key, value in tag_map.items():
             response.append(
-                self.ec2.create_tags(instance_id, tag, tag_map[tag])
-            )  # noqa
+                self.ec2_client().create_tags(
+                    Resources=[instance_id], Tags=[{"Key": key, "Value": value}]
+                )
+            )
 
         return response
 

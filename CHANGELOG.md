@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix pylint findings in purge_snapshots.py
 - Fix pylint findings in test_aem_offline_snapshot.py
 - Fix pylint findings in test_aws_helper.py (Trivial fixes)
+- Fix pylint findings in test_aws_helper.py (Code fixes)
 
 ## 2.1.0 - 2023-08-16
 ### Removed
