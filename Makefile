@@ -24,8 +24,11 @@ rmdeps:
 
 lint:
 	shellcheck scripts/*.sh
-	pylint lambda/*.py
-
+	$(call python_venv,pylint lambda/*.py)
+	$(call python_venv,yamllint .github/workflows/*.yaml)
+	$(call python_venv,actionlint -shellcheck= .github/workflows/*.yaml)
+	markdownlint-cli2 README.md
+	python3 -m json.tool .rtk.json
 
 test:
 	python3 -m venv .venv

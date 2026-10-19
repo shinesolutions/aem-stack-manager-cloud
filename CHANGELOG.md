@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Added .pylintrc configuration
 - Add publish Makefile target and workflow
+- Add markdownlint, yamllint, json check
 
 ### Changed
 - Simplify GitHub Actions release workflows to not use custom action
