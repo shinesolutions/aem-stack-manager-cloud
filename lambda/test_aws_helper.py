@@ -4,7 +4,7 @@
     Class supports the other Test classes
 """
 # pylint: disable=C0301
-# pylint: disable=R0201
+# pylint: disable=C0302
 # pylint: disable=R0801
 # pylint: disable=R0904
 # pylint: disable=R0914
@@ -83,6 +83,7 @@ class AwsHelper:
         return boto3.client("dynamodb", region_name=aws_region)
 
     def create_ssm_document(self, document_name):
+        """Create ssm command document"""
         document_content = """
         {
           "schemaVersion": "2.2",
@@ -126,6 +127,7 @@ class AwsHelper:
         return document_name
 
     def create_ddb_table(self, table_name):
+        """Create dynamodb table"""
         response = self.ddb_client().create_table(
             AttributeDefinitions=[
                 {"AttributeName": "command_id", "AttributeType": "S"},
@@ -156,6 +158,7 @@ class AwsHelper:
         return response
 
     def create_s3_bucket(self, bucket_name):
+        """Create s3 bucket"""
         response = self.s3_client().create_bucket(
             Bucket=bucket_name,
             CreateBucketConfiguration={"LocationConstraint": "ap-southeast-2"},
@@ -163,11 +166,12 @@ class AwsHelper:
         return response
 
     def create_sns_topic(self, topic_name):
+        """Create sns topic"""
         response = self.sns_client().create_topic(Name=topic_name)
 
         return response["TopicArn"]
 
-    def create_sm_config(
+    def create_sm_config(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         self,
         s3_bucket_name,
         s3_key_prefix,
@@ -176,6 +180,7 @@ class AwsHelper:
         ddb_table_name,
         ssm_document_name,
     ):
+        """Create Stack Manager config"""
         config = {
             "ec2_run_command": {
                 "cmd-output-bucket": s3_bucket_name,
@@ -227,7 +232,7 @@ class AwsHelper:
 
         return config
 
-    def upload_sm_config(
+    def upload_sm_config(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         self,
         s3_bucket_name,
         s3_key_prefix,
@@ -236,6 +241,7 @@ class AwsHelper:
         ddb_table_name,
         ssm_document_name,
     ):
+        """Upload Stack Manager config to s3"""
         sm_config = self.create_sm_config(
             s3_bucket_name,
             s3_key_prefix,
@@ -255,12 +261,13 @@ class AwsHelper:
 
     # Infrastructure helper
     def setup_stack_manager_infrastructure(self):
+        """Setup Stack Manager infrastructure"""
         s3_bucket_name = os.getenv("S3_BUCKET")
         s3_key_prefix = os.getenv("S3_PREFIX")
         s3_key_prefix = os.getenv("S3_PREFIX")
         ddb_table_name = os.getenv("DDB_TABLE_NAME")
         ssm_document_name = "aoc-sm-ssm-doc"
-        response = self.create_s3_bucket(s3_bucket_name)
+        self.create_s3_bucket(s3_bucket_name)
 
         sns_topic_arn = self.create_sns_topic("aoc-sm")
         self.create_ddb_table(ddb_table_name)
@@ -279,11 +286,12 @@ class AwsHelper:
         )
 
     def setup_stack_manager_preview_infrastructure(self):
+        """Setup Stack Manager preview infrastructure"""
         s3_bucket_name = os.getenv("S3_BUCKET")
         s3_key_prefix = os.getenv("S3_PREFIX")
         ddb_table_name = os.getenv("DDB_TABLE_NAME")
         ssm_document_name = "aoc-sm--preview-ssm-doc"
-        response = self.create_s3_bucket(s3_bucket_name)
+        self.create_s3_bucket(s3_bucket_name)
 
         sns_topic_arn = self.create_sns_topic("aoc-sm-preview")
         self.create_ddb_table(ddb_table_name)
@@ -322,17 +330,17 @@ class AwsHelper:
 
         # Author-Dispatcher preparation
         author_dispatcher_instance_name = "author-dispatcher"
-        author_dispatcher_asg_name = "%s-asg" % author_dispatcher_instance_name
+        author_dispatcher_asg_name = f"{author_dispatcher_instance_name}-asg"
         author_dispatcher_asg_desired_capacity = 1
 
         # Publish-Dispatcher preparation
         publish_dispatcher_instance_name = "publish-dispatcher"
-        publish_dispatcher_asg_name = "%s-asg" % publish_dispatcher_instance_name
+        publish_dispatcher_asg_name = f"{publish_dispatcher_instance_name}-asg"
         publish_dispatcher_asg_desired_capacity = 2
 
         # Publish preparation
         publish_instance_name = "publish"
-        publish_asg_name = "%s-asg" % publish_instance_name
+        publish_asg_name = f"{publish_instance_name}-asg"
         publish_asg_desired_capacity = 2
 
         # Author preparation
@@ -386,9 +394,9 @@ class AwsHelper:
         return responses
 
     def setup_standard_infrastructure_promoted_standby(self):
+        """Setup standard infrastructure with promoted Author-Standby"""
         standard_infrastructure = self.setup_standard_infrastructure()
         stack_prefix = os.getenv("STACK_PREFIX")
-        responses = {}
         author_primary_instance_id = standard_infrastructure["Author-Primary"]
         self.ec2_client().terminate_instances(
             InstanceIds=[
@@ -401,17 +409,18 @@ class AwsHelper:
         )
 
     def setup_preview_infrastructure(self):
+        """Setup standard infrastructure with preview-publish components"""
         responses = self.setup_standard_infrastructure()
         stack_prefix = os.getenv("STACK_PREFIX")
 
         # preview-publish-Dispatcher preparation
         publish_dispatcher_instance_name = "preview-publish-dispatcher"
-        publish_dispatcher_asg_name = "%s-asg" % publish_dispatcher_instance_name
+        publish_dispatcher_asg_name = f"{publish_dispatcher_instance_name}-asg"
         publish_dispatcher_asg_desired_capacity = 2
 
         # preview-publish preparation
         publish_instance_name = "preview-publish"
-        publish_asg_name = "%s-asg" % publish_instance_name
+        publish_asg_name = f"{publish_instance_name}-asg"
         publish_asg_desired_capacity = 2
 
         # Create preview-publish-dispatcher Auto Scaling Group
@@ -436,9 +445,9 @@ class AwsHelper:
         return responses
 
     def setup_preview_infrastructure_promoted_standby(self):
+        """Setup preview infrastructure with promoted Author-Standby"""
         standard_infrastructure = self.setup_preview_infrastructure()
         stack_prefix = os.getenv("STACK_PREFIX")
-        responses = {}
         author_primary_instance_id = standard_infrastructure["Author-Primary"]
         self.ec2_client().terminate_instances(
             InstanceIds=[
@@ -451,6 +460,7 @@ class AwsHelper:
         )
 
     def elbv2_register_target(self, target_group_arn, instance_id):
+        """Register EC2 instance to Target Group"""
         response = self.elb_client().register_targets(
             TargetGroupArn=target_group_arn,
             Targets=[
@@ -465,6 +475,7 @@ class AwsHelper:
     def setup_author_dispatcher_infrastructure(
         self, asg_name, instance_name, desired_capacity, stack_prefix
     ):
+        """Setup Author-Dispatcher infrastructure"""
         target_group_arn = self.create_target_group(instance_name)
 
         # Create Dispatcher Auto Scaling Group
@@ -473,7 +484,6 @@ class AwsHelper:
 
         # Attach Target Group to ASG
         self.attach_load_balancer_target_groups(asg_name, target_group_arn)
-        i = 0
         # Modify each instance in ASG
         for instance in instances:
             # Register Dispatcher EC2 instance to Target Group
@@ -485,15 +495,13 @@ class AwsHelper:
                 instance, instance_name, stack_prefix, "author-dispatcher"
             )
 
-        response = self.asg_client().describe_auto_scaling_groups(
-            AutoScalingGroupNames=[asg_name]
-        )
 
         return instances
 
     def setup_publish_dispatcher_infrastructure(
         self, asg_name, instance_name, desired_capacity, stack_prefix
     ):
+        """Setup Publish-Dispatcher infrastructure"""
         target_group_arn = self.create_target_group(instance_name)
 
         # Create Dispatcher Auto Scaling Group
@@ -502,7 +510,6 @@ class AwsHelper:
 
         # Attach Target Group to ASG
         self.attach_load_balancer_target_groups(asg_name, target_group_arn)
-        i = 0
         # Modify each instance in ASG
         for instance in instances:
             # Register Dispatcher EC2 instance to Target Group
@@ -514,15 +521,12 @@ class AwsHelper:
                 instance, instance_name, stack_prefix, "publish-dispatcher"
             )
 
-        response = self.asg_client().describe_auto_scaling_groups(
-            AutoScalingGroupNames=[asg_name]
-        )
-
         return instances
 
     def setup_preview_publish_dispatcher_infrastructure(
         self, asg_name, instance_name, desired_capacity, stack_prefix
     ):
+        """Setup preview-Publish-Dispatcher infrastructure"""
         target_group_arn = self.create_target_group(instance_name)
 
         # Create Dispatcher Auto Scaling Group
@@ -531,7 +535,6 @@ class AwsHelper:
 
         # Attach Target Group to ASG
         self.attach_load_balancer_target_groups(asg_name, target_group_arn)
-        i = 0
         # Modify each instance in ASG
         for instance in instances:
             # Register Dispatcher EC2 instance to Target Group
@@ -543,13 +546,10 @@ class AwsHelper:
                 instance, instance_name, stack_prefix, "preview-publish-dispatcher"
             )
 
-        response = self.asg_client().describe_auto_scaling_groups(
-            AutoScalingGroupNames=[asg_name]
-        )
-
         return instances
 
     def setup_author_primary_infrastructure(self, instance_name, stack_prefix):
+        """Setup Author-Primary infrastructure"""
         # Create Publish Auto Scaling Group
         instance = self.create_instance(instance_name)
 
@@ -565,6 +565,7 @@ class AwsHelper:
         return instance
 
     def setup_author_standby_infrastructure(self, instance_name, stack_prefix):
+        """Setup Author-Standby infrastructure"""
         # Create Publish Auto Scaling Group
         instance = self.create_instance(instance_name)
 
@@ -587,6 +588,7 @@ class AwsHelper:
         stack_prefix,
         publish_dispatcher_instance_list,
     ):
+        """Setup Publish infrastructure"""
         # Create Publish Auto Scaling Group
         asg_response = self.create_asg(asg_name, desired_capacity)
         instances = self._gen_instances_id_list(asg_response["Instances"])
@@ -618,6 +620,7 @@ class AwsHelper:
         stack_prefix,
         preview_publish_dispatcher_instance_list,
     ):
+        """Setup preview-Publish infrastructure"""
         # Create Publish Auto Scaling Group
         asg_response = self.create_asg(asg_name, desired_capacity)
         instances = self._gen_instances_id_list(asg_response["Instances"])
@@ -673,12 +676,12 @@ class AwsHelper:
         asg_client = self.asg_client()
 
         # Create Launch configuration
-        lc_config = dict(
-            LaunchConfigurationName="lc-%s" % asg_name,
-            ImageId=image_response["Images"][0]["ImageId"],
-            KeyName="mock_key",
-            InstanceType="m5.xlarge",
-            BlockDeviceMappings=[
+        lc_config = {
+            "LaunchConfigurationName": f"lc-{asg_name}",
+            "ImageId": image_response["Images"][0]["ImageId"],
+            "KeyName": "mock_key",
+            "InstanceType": "m5.xlarge",
+            "BlockDeviceMappings": [
                 {
                     "DeviceName": "/dev/sdb",
                     "Ebs": {
@@ -692,7 +695,7 @@ class AwsHelper:
                     },
                 },
             ],
-        )
+        }
         responses = []
         responses.append(asg_client.create_launch_configuration(**lc_config))
         responses.append(
@@ -701,11 +704,11 @@ class AwsHelper:
                 MinSize=desired_capacity,
                 MaxSize=3,
                 DesiredCapacity=desired_capacity,
-                LaunchConfigurationName="lc-%s" % asg_name,
+                LaunchConfigurationName=f"lc-{asg_name}",
                 AvailabilityZones=[
-                    "%sa" % aws_region,
-                    "%sb" % aws_region,
-                    "%sc" % aws_region,
+                    f"{aws_region}a",
+                    f"{aws_region}b",
+                    f"{aws_region}c",
                 ],
             )
         )
@@ -770,9 +773,9 @@ class AwsHelper:
             "StackPrefix": stack_prefix,
             "Component": component,
         }
-        for tag in tag_map:
+        for key, value in tag_map.items():
             response = self.ec2_client().create_tags(
-                Resources=[instance_id], Tags=[{"Key": tag, "Value": tag_map[tag]}]
+                Resources=[instance_id], Tags=[{"Key": key, "Value": value}]
             )
 
         return response
@@ -786,9 +789,9 @@ class AwsHelper:
             "StackPrefix": stack_prefix,
             "Component": component,
         }
-        for tag in tag_map:
+        for key, value in tag_map.items():
             response = self.ec2_client().create_tags(
-                Resources=[instance_id], Tags=[{"Key": tag, "Value": tag_map[tag]}]
+                Resources=[instance_id], Tags=[{"Key": key, "Value": value}]
             )
 
         return response
@@ -810,9 +813,9 @@ class AwsHelper:
             "Component": component,
             "PairInstanceId": publish_dispatcher_instance_id,
         }
-        for tag in tag_map:
+        for key, value in tag_map.items():
             response = self.ec2_client().create_tags(
-                Resources=[instance_id], Tags=[{"Key": tag, "Value": tag_map[tag]}]
+                Resources=[instance_id], Tags=[{"Key": key, "Value": value}]
             )
 
         return response
@@ -834,9 +837,9 @@ class AwsHelper:
             "Component": component,
             "PreviewPairInstanceId": publish_dispatcher_instance_id,
         }
-        for tag in tag_map:
+        for key, value in tag_map.items():
             response = self.ec2_client().create_tags(
-                Resources=[instance_id], Tags=[{"Key": tag, "Value": tag_map[tag]}]
+                Resources=[instance_id], Tags=[{"Key": key, "Value": value}]
             )
 
         return response
@@ -863,7 +866,7 @@ class AwsHelper:
         vpc_id = self.get_vpc_id()
 
         response = client.create_target_group(
-            Name="%s-tg" % name,
+            Name=f"{name}-tg",
             Port=443,
             Protocol="HTTPS",
             VpcId=vpc_id,
@@ -923,19 +926,6 @@ class AwsHelper:
 
         return self.get_ec2_info_by_id(instance_id)
 
-    def create_volume(self, instance_id):
-        """
-        Create EC2 Volume
-        """
-        response = self.get_ec2_info_by_id(instance_id)
-        availability_zone = response["AvailabilityZone"]
-
-        # Get EC2 Snapshot to create the volume from
-        snapshot_id = self.get_snapshot_id()
-        response = self.create_volume(snapshot_id, availability_zone)
-
-        return response["VolumeId"]
-
     def get_snapshot_id(self):
         """
         Get a Snapshot ID
@@ -964,14 +954,17 @@ class AwsHelper:
         :return List of Boto3 EC2 client create_tags responses
         """
         response = []
-        for tag in tag_map:
+        for key, value in tag_map.items():
             response.append(
-                self.ec2.create_tags(instance_id, tag, tag_map[tag])
-            )  # noqa
+                self.ec2_client().create_tags(
+                    Resources=[instance_id], Tags=[{"Key": key, "Value": value}]
+                )
+            )
 
         return response
 
     def get_ec2_info_by_id(self, instance_id):
+        """Get EC2 instance information"""
         ec2_information = self._get_ec2_information_by_id(instance_id)
 
         tags = self._create_tag_mapping(ec2_information["Tags"])
@@ -1011,6 +1004,7 @@ class AwsHelper:
         return tag_mapping
 
     def create_volume(self, snapshot_id, availability_zone):
+        """Create EC2 Volume from snapshot"""
         response = self.ec2_client().create_volume(
             AvailabilityZone=availability_zone, SnapshotId=snapshot_id
         )
@@ -1018,6 +1012,7 @@ class AwsHelper:
         return response
 
     def attach_volume(self, instance_id, volume_id, device_name):
+        """Attach EC2 Volume to EC2 instance"""
         response = self.ec2_client().attach_volume(
             Device=device_name, InstanceId=instance_id, VolumeId=volume_id
         )

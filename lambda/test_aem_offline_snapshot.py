@@ -1,6 +1,5 @@
 # pylint: disable=C0301
 # pylint: disable=C0302
-# pylint: disable=R0201
 # pylint: disable=R0904
 # pylint: disable=R0913
 # pylint: disable=R0914
@@ -12,24 +11,9 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     Class to test the serverless orchestration
 """
-import json
 import os
-import datetime
 import unittest
-import boto3
-from mock import patch, PropertyMock
-from moto import (
-    mock_autoscaling,
-    mock_ec2,
-    mock_elbv2,
-    mock_iam,
-    mock_sts,
-    mock_s3,
-    mock_sns,
-    mock_dynamodb,
-    mock_ssm,
-)
-from moto.core import patch_client
+from moto import mock_aws # pylint: disable=import-error
 from test_aws_helper import AwsHelper
 os.environ["AWS_REGION"] = "ap-southeast-2"
 
@@ -43,7 +27,8 @@ def aws_credentials():
 
 aws_credentials()
 
-from aem_offline_snapshot import sns_message_processor
+# Must be imported after aws_credentials() as the module reads AWS config at import time
+from aem_offline_snapshot import sns_message_processor  # pylint: disable=wrong-import-position
 
 class TestUtils(unittest.TestCase):
     """
@@ -57,15 +42,9 @@ class TestUtils(unittest.TestCase):
         os.environ["AWS_SESSION_TOKEN"] = "testing"
         os.environ["AWS_DEFAULT_REGION"] = "ap-southeast-2"
 
-    @mock_autoscaling
-    @mock_ec2
-    @mock_elbv2
-    @mock_iam
-    @mock_sns
-    @mock_dynamodb
-    @mock_ssm
-    @mock_s3
+    @mock_aws
     def test_offline_snapshot_standard_architecture(self):
+        """Test offline snapshot standard architecture."""
         # Preparation
         self.aws_credentials()
         stack_prefix = "aoc-fs"
@@ -83,8 +62,6 @@ class TestUtils(unittest.TestCase):
         AwsHelper().setup_standard_infrastructure()
         context = {}
 
-        s3_client = boto3.client("s3")
-        patch_client(s3_client)
 
         # Event to start the offlien process
         event = {
@@ -107,7 +84,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -139,7 +116,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -171,7 +148,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -203,7 +180,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -235,7 +212,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -267,7 +244,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -299,7 +276,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -329,15 +306,9 @@ class TestUtils(unittest.TestCase):
 
         assert response == {"status": "Success"}
 
-    @mock_autoscaling
-    @mock_ec2
-    @mock_elbv2
-    @mock_iam
-    @mock_sns
-    @mock_dynamodb
-    @mock_ssm
-    @mock_s3
+    @mock_aws
     def test_offline_snapshot_preview_architecture(self):
+        """Test offline snapshot preview architecture."""
         # Preparation
         self.aws_credentials()
         stack_prefix = "aoc-fs-preview"
@@ -350,15 +321,11 @@ class TestUtils(unittest.TestCase):
 
         ddb_table_name = os.getenv("DDB_TABLE_NAME")
 
-        s3_client = boto3.client("s3")
-        patch_client(s3_client)
 
         # Create Infrastructure
         AwsHelper().setup_stack_manager_preview_infrastructure()
         AwsHelper().setup_preview_infrastructure()
 
-        s3_client = boto3.client("s3")
-        patch_client(s3_client)
 
         context = {}
 
@@ -382,7 +349,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -414,7 +381,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -446,7 +413,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -478,7 +445,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -510,7 +477,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -542,7 +509,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -574,7 +541,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -606,7 +573,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -638,7 +605,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -667,15 +634,9 @@ class TestUtils(unittest.TestCase):
         response = sns_message_processor(event, context)
         assert response == {"status": "Success"}
 
-    @mock_autoscaling
-    @mock_ec2
-    @mock_elbv2
-    @mock_iam
-    @mock_sns
-    @mock_dynamodb
-    @mock_ssm
-    @mock_s3
+    @mock_aws
     def test_offline_snapshot_standard_architecture_promoted_standby(self):
+        """Test offline snapshot standard architecture promoted standby."""
         # Preparation
         self.aws_credentials()
         stack_prefix = "aoc-fs-promoted-author"
@@ -688,15 +649,11 @@ class TestUtils(unittest.TestCase):
 
         ddb_table_name = os.getenv("DDB_TABLE_NAME")
 
-        s3_client = boto3.client("s3")
-        patch_client(s3_client)
 
         # Create Infrastructure
         AwsHelper().setup_stack_manager_infrastructure()
         AwsHelper().setup_standard_infrastructure_promoted_standby()
 
-        s3_client = boto3.client("s3")
-        patch_client(s3_client)
 
         context = {}
 
@@ -720,7 +677,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -753,7 +710,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -785,7 +742,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -817,7 +774,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -849,7 +806,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -879,15 +836,9 @@ class TestUtils(unittest.TestCase):
 
         assert response == {"status": "Success"}
 
-    @mock_autoscaling
-    @mock_ec2
-    @mock_elbv2
-    @mock_iam
-    @mock_sns
-    @mock_dynamodb
-    @mock_ssm
-    @mock_s3
+    @mock_aws
     def test_offline_snapshot_preview_architecture_promoted_standby(self):
+        """Test offline snapshot preview architecture promoted standby."""
         # Preparation
         self.aws_credentials()
         stack_prefix = "aoc-fs-preview-promoted-standby"
@@ -900,15 +851,11 @@ class TestUtils(unittest.TestCase):
 
         ddb_table_name = os.getenv("DDB_TABLE_NAME")
 
-        s3_client = boto3.client("s3")
-        patch_client(s3_client)
 
         # Create Infrastructure
         AwsHelper().setup_stack_manager_preview_infrastructure()
         AwsHelper().setup_preview_infrastructure_promoted_standby()
 
-        s3_client = boto3.client("s3")
-        patch_client(s3_client)
 
         context = {}
 
@@ -932,7 +879,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -964,7 +911,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -996,7 +943,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1028,7 +975,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1060,7 +1007,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1092,7 +1039,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1124,7 +1071,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1154,15 +1101,9 @@ class TestUtils(unittest.TestCase):
         assert response == {"status": "Success"}
 
 
-    @mock_autoscaling
-    @mock_ec2
-    @mock_elbv2
-    @mock_iam
-    @mock_sns
-    @mock_dynamodb
-    @mock_ssm
-    @mock_s3
+    @mock_aws
     def test_offline_compaction_snapshot_standard_architecture(self):
+        """Test offline compaction snapshot standard architecture."""
         # Preparation
         self.aws_credentials()
         stack_prefix = "aoc-fs"
@@ -1180,8 +1121,6 @@ class TestUtils(unittest.TestCase):
         AwsHelper().setup_standard_infrastructure()
         context = {}
 
-        s3_client = boto3.client("s3")
-        patch_client(s3_client)
 
         # Event to start the offlien process
         event = {
@@ -1204,7 +1143,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1236,7 +1175,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1268,7 +1207,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1300,7 +1239,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1332,7 +1271,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1364,7 +1303,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1396,7 +1335,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1428,7 +1367,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1460,7 +1399,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1492,7 +1431,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1532,7 +1471,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1572,7 +1511,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1612,7 +1551,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1650,15 +1589,9 @@ class TestUtils(unittest.TestCase):
 
         assert response == {"status": "Success"}
 
-    @mock_autoscaling
-    @mock_ec2
-    @mock_elbv2
-    @mock_iam
-    @mock_sns
-    @mock_dynamodb
-    @mock_ssm
-    @mock_s3
+    @mock_aws
     def test_offline_compaction_snapshot_preview_architecture(self):
+        """Test offline compaction snapshot preview architecture."""
         # Preparation
         self.aws_credentials()
         stack_prefix = "aoc-fs-preview"
@@ -1671,15 +1604,11 @@ class TestUtils(unittest.TestCase):
 
         ddb_table_name = os.getenv("DDB_TABLE_NAME")
 
-        s3_client = boto3.client("s3")
-        patch_client(s3_client)
 
         # Create Infrastructure
         AwsHelper().setup_stack_manager_preview_infrastructure()
         AwsHelper().setup_preview_infrastructure()
 
-        s3_client = boto3.client("s3")
-        patch_client(s3_client)
 
         context = {}
 
@@ -1703,7 +1632,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1735,7 +1664,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1767,7 +1696,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1799,7 +1728,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1831,7 +1760,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1863,7 +1792,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1895,7 +1824,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1927,7 +1856,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1959,7 +1888,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -1991,7 +1920,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2023,7 +1952,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2055,7 +1984,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2095,7 +2024,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2135,7 +2064,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2175,7 +2104,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2213,15 +2142,9 @@ class TestUtils(unittest.TestCase):
 
         assert response == {"status": "Success"}
 
-    @mock_autoscaling
-    @mock_ec2
-    @mock_elbv2
-    @mock_iam
-    @mock_sns
-    @mock_dynamodb
-    @mock_ssm
-    @mock_s3
+    @mock_aws
     def test_offline_compaction_snapshot_standard_architecture_promoted_standby(self):
+        """Test offline compaction snapshot standard architecture promoted standby."""
         # Preparation
         self.aws_credentials()
         stack_prefix = "aoc-fs-promoted-author"
@@ -2234,15 +2157,11 @@ class TestUtils(unittest.TestCase):
 
         ddb_table_name = os.getenv("DDB_TABLE_NAME")
 
-        s3_client = boto3.client("s3")
-        patch_client(s3_client)
 
         # Create Infrastructure
         AwsHelper().setup_stack_manager_infrastructure()
         AwsHelper().setup_standard_infrastructure_promoted_standby()
 
-        s3_client = boto3.client("s3")
-        patch_client(s3_client)
 
         context = {}
 
@@ -2266,7 +2185,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2299,7 +2218,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2331,7 +2250,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2363,7 +2282,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2395,7 +2314,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2427,7 +2346,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2459,7 +2378,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2499,7 +2418,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2539,7 +2458,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2579,7 +2498,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2617,15 +2536,9 @@ class TestUtils(unittest.TestCase):
 
         assert response == {"status": "Success"}
 
-    @mock_autoscaling
-    @mock_ec2
-    @mock_elbv2
-    @mock_iam
-    @mock_sns
-    @mock_dynamodb
-    @mock_ssm
-    @mock_s3
+    @mock_aws
     def test_offline_compaction_snapshot_preview_architecture_promoted_standby(self):
+        """Test offline compaction snapshot preview architecture promoted standby."""
         # Preparation
         self.aws_credentials()
         stack_prefix = "aoc-fs-preview-promoted-standby"
@@ -2638,15 +2551,11 @@ class TestUtils(unittest.TestCase):
 
         ddb_table_name = os.getenv("DDB_TABLE_NAME")
 
-        s3_client = boto3.client("s3")
-        patch_client(s3_client)
 
         # Create Infrastructure
         AwsHelper().setup_stack_manager_preview_infrastructure()
         AwsHelper().setup_preview_infrastructure_promoted_standby()
 
-        s3_client = boto3.client("s3")
-        patch_client(s3_client)
 
         context = {}
 
@@ -2670,7 +2579,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2702,7 +2611,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2734,7 +2643,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2766,7 +2675,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2798,7 +2707,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2830,7 +2739,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2862,7 +2771,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2894,7 +2803,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2926,7 +2835,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -2966,7 +2875,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -3006,7 +2915,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {
@@ -3046,7 +2955,7 @@ class TestUtils(unittest.TestCase):
         scan_filter_dict = {
             "TableName": ddb_table_name,
             "Limit": 100,
-            "Select": "ALL_ATTRIBUTES",
+            "Select": "SPECIFIC_ATTRIBUTES",
             "ProjectionExpression": "command_id",
             "ScanFilter": {
                 "state": {

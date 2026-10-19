@@ -1,4 +1,5 @@
 # -*- coding: utf8 -*-
+# pylint: disable=too-many-lines
 
 """
 Lambda function to manage AEM stack offline backups.
@@ -20,7 +21,7 @@ __license__ = "Apache License, Version 2.0"
 
 # setting up logger
 logger = logging.getLogger(__name__)
-logger.setLevel(int(os.getenv("LOG_LEVEL", logging.INFO)))
+logger.setLevel(int(os.getenv("LOG_LEVEL", str(logging.INFO))))
 
 
 # AWS resources
@@ -33,14 +34,17 @@ sns = boto3.client("sns", region_name=aws_region)
 
 
 class MyEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, datetime.datetime):
-            return obj.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+    """JSON encoder that serialises datetime objects as ISO 8601 strings."""
 
-        return json.JSONEncoder.default(self, obj)
+    def default(self, o):
+        if isinstance(o, datetime.datetime):
+            return o.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+
+        return json.JSONEncoder.default(self, o)
 
 
 def instance_ids_by_tags(filters):
+    """Return the IDs of EC2 instances matching the given describe_instances filters."""
     response = ec2.describe_instances(Filters=filters)
     response2 = json.loads(json.dumps(response, cls=MyEncoder))
 
@@ -53,6 +57,7 @@ def instance_ids_by_tags(filters):
 
 
 def send_ssm_cmd(cmd_details):
+    """Send an SSM command and return the JSON-serialisable response."""
     ssm_document = cmd_details["DocumentName"]
     logger.info("Start calling SSM Document %s ...", ssm_document)
     response = json.loads(json.dumps(ssm.send_command(**cmd_details), cls=MyEncoder))
@@ -61,6 +66,7 @@ def send_ssm_cmd(cmd_details):
 
 
 def get_author_primary_ids(stack_prefix):
+    """Return running author-primary instance IDs for the stack."""
     filters = [
         {"Name": "tag:StackPrefix", "Values": [stack_prefix]},
         {"Name": "instance-state-name", "Values": ["running"]},
@@ -71,6 +77,7 @@ def get_author_primary_ids(stack_prefix):
 
 
 def get_author_standby_ids(stack_prefix):
+    """Return running author-standby instance IDs for the stack."""
     filters = [
         {"Name": "tag:StackPrefix", "Values": [stack_prefix]},
         {"Name": "instance-state-name", "Values": ["running"]},
@@ -81,6 +88,7 @@ def get_author_standby_ids(stack_prefix):
 
 
 def get_promoted_author_standby_ids(stack_prefix):
+    """Return running instance IDs of author-standby instances promoted to primary."""
     filters = [
         {"Name": "tag:StackPrefix", "Values": [stack_prefix]},
         {"Name": "instance-state-name", "Values": ["running"]},
@@ -94,6 +102,7 @@ def get_promoted_author_standby_ids(stack_prefix):
 
 
 def get_publish_ids(stack_prefix):
+    """Return running publish instance IDs for the stack."""
     filters = [
         {"Name": "tag:StackPrefix", "Values": [stack_prefix]},
         {"Name": "instance-state-name", "Values": ["running"]},
@@ -104,6 +113,7 @@ def get_publish_ids(stack_prefix):
 
 
 def get_preview_publish_ids(stack_prefix):
+    """Return running preview-publish instance IDs for the stack."""
     filters = [
         {"Name": "tag:StackPrefix", "Values": [stack_prefix]},
         {"Name": "instance-state-name", "Values": ["running"]},
@@ -132,7 +142,7 @@ def manage_autoscaling_standby(stack_prefix, action, **kwargs):
             {"Name": "instance-id", "Values": kwargs["byInstanceIds"][0:1]},
         ]
     else:
-        raise Exception("neither byComponent or byInstanceIds found in arguments")
+        raise ValueError("neither byComponent or byInstanceIds found in arguments")
 
     # find the autoscaling group those instances are in
     response = ec2.describe_instances(Filters=filters)
@@ -265,6 +275,7 @@ def manage_autoscaling_standby(stack_prefix, action, **kwargs):
 
 
 def retrieve_tag_value(instance_id, tag_key):
+    """Return the value of an EC2 tag on the instance, or None if the tag is not set."""
     response = boto3.client("ec2").describe_tags(
         Filters=[
             {"Name": "resource-id", "Values": [instance_id]},
@@ -368,10 +379,11 @@ def stack_health_check(
         logger.error("Found %s publish instances. Unhealthy stack.", publish_count)
         return None
 
+    author_standby_instance_id = None
     if promoted_author_standby_instances_count == 1:
         author_primary_instance_id = promoted_author_standby_instances[0]
         author_standby_instance_id = "Promoted"
-        logger.warn(
+        logger.warning(
             "[%s] Found promoted Author Standby going to run offline-snapshot only on promoted Author instance.",
             stack_prefix,
         )
@@ -415,7 +427,7 @@ def stack_health_check(
     }
 
 
-def put_state_in_dynamodb(
+def put_state_in_dynamodb(  # pylint: disable=too-many-arguments,too-many-positional-arguments
     table_name, command_id, environment, task, state, timestamp, message_id, **kwargs
 ):
     """
@@ -480,6 +492,7 @@ def put_state_in_dynamodb(
 
 # dynamodb is used to host state information
 def get_state_from_dynamodb(table_name, command_id):
+    """Fetch the state item for a command ID from DynamoDB."""
     item = dynamodb.get_item(
         TableName=table_name,
         Key={"command_id": {"S": command_id}},
@@ -491,6 +504,7 @@ def get_state_from_dynamodb(table_name, command_id):
 
 
 def update_state_in_dynamodb(table_name, command_id, new_state, timestamp):
+    """Update the state and timestamp of an existing DynamoDB state item."""
     item_update = {
         "TableName": table_name,
         "Key": {"command_id": {"S": command_id}},
@@ -507,6 +521,7 @@ def update_state_in_dynamodb(table_name, command_id, new_state, timestamp):
 
 # currently just forward the notification message from EC2 Run command.
 def publish_status_message(topic, message):
+    """Publish a message to the given SNS topic."""
     payload = {"default": message}
 
     sns.publish(TopicArn=topic, MessageStructure="json", Message=json.dumps(payload))
@@ -515,6 +530,7 @@ def publish_status_message(topic, message):
 def get_remaining_publish_dispatcher_pairs(
     stack_prefix: str, completed_publish_id: str
 ):
+    """Return (publish_ids, dispatcher_ids) for publish instances excluding the completed one."""
     filters = [
         {"Name": "tag:StackPrefix", "Values": [stack_prefix]},
         {"Name": "instance-state-name", "Values": ["running"]},
@@ -534,6 +550,7 @@ def get_remaining_publish_dispatcher_pairs(
 def get_remaining_preview_publish_dispatcher_pairs(
     stack_prefix: str, completed_preview_publish_id: str
 ):
+    """Return (preview_publish_ids, dispatcher_ids) excluding the completed preview publish."""
     filters = [
         {"Name": "tag:StackPrefix", "Values": [stack_prefix]},
         {"Name": "instance-state-name", "Values": ["running"]},
@@ -553,6 +570,7 @@ def get_remaining_preview_publish_dispatcher_pairs(
 
 
 def get_stack_manager_config():
+    """Load config.json from S3 (if configured) or the lambda bundle."""
     # reading in config info from either s3 or within bundle
     bucket = os.getenv("S3_BUCKET")
     prefix = os.getenv("S3_PREFIX")
@@ -560,9 +578,9 @@ def get_stack_manager_config():
         config_file = "/tmp/config.json"
         s3.download_file(bucket, f"{prefix}/config.json", config_file)
     else:
-        logger.warn("Unable to locate config.json in S3, searching within bundle")
+        logger.warning("Unable to locate config.json in S3, searching within bundle")
 
-    with open(config_file, "r") as open_file:
+    with open(config_file, "r", encoding="utf-8") as open_file:
         content = "".join(open_file.readlines()).replace("\n", "")
         logger.debug("config file: %s", str(content))
         config = json.loads(content)
@@ -571,6 +589,7 @@ def get_stack_manager_config():
 
 
 def get_ssm_command_common_parameters(stack_manager_config):
+    """Build the SSM send_command parameters shared by all offline snapshot commands."""
     run_command = stack_manager_config["ec2_run_command"]
     offline_snapshot_config = stack_manager_config["offline_snapshot"]
 
@@ -592,6 +611,7 @@ def get_ssm_command_common_parameters(stack_manager_config):
 def get_ssm_command_parameter_manage_service(
     instance_ids: list, aem_id: str, action: str
 ):
+    """Build SSM parameters to start/stop the AEM service on the given instances."""
     config = get_stack_manager_config()
     ssm_params = get_ssm_command_common_parameters(config)
 
@@ -614,6 +634,7 @@ def get_ssm_command_parameter_manage_service(
 
 
 def get_ssm_command_parameter_offline_compaction_snapshot(instance_ids: list):
+    """Build SSM parameters to run offline compaction on the given instances."""
     config = get_stack_manager_config()
     ssm_params = get_ssm_command_common_parameters(config)
 
@@ -631,6 +652,7 @@ def get_ssm_command_parameter_offline_compaction_snapshot(instance_ids: list):
 
 
 def get_ssm_command_parameter_offline_snapshot(instance_ids: list):
+    """Build SSM parameters to run an offline snapshot on the given instances."""
     config = get_stack_manager_config()
     ssm_params = get_ssm_command_common_parameters(config)
 
@@ -648,6 +670,7 @@ def get_ssm_command_parameter_offline_snapshot(instance_ids: list):
 
 
 def get_ssm_command_parameter_wait_until_ready(instance_ids: list):
+    """Build SSM parameters to wait until AEM is ready on the given instances."""
     config = get_stack_manager_config()
     ssm_params = get_ssm_command_common_parameters(config)
 
@@ -671,6 +694,7 @@ def log_command_info(
     aem_component=None,
     command_id=None,
 ):
+    """Log progress of sending an SSM command, before and after it is sent."""
     if command_id is not None:
         logger.info(
             "[%s/%s] Command ID: %s ...", stack_prefix, aem_component, command_id
@@ -693,6 +717,8 @@ def log_command_info(
         logger.info("[%s/%s] %s ", stack_prefix, aem_component, send_command)
 
 
+# The process is a state machine driven by SNS messages, hence the size.
+# pylint: disable-next=too-many-branches,too-many-statements
 def sns_message_processor(event, context):
     """
     offline snapshot is a complicated process, requiring a few things happen in the
@@ -718,6 +744,14 @@ def sns_message_processor(event, context):
 
         supplement = {}
         external_id = None
+        # TODO: the failure paths below (unhealthy stack, failed lock, SSM
+        # "Failed" status, unexpected state) fall through instead of returning
+        # early; these defaults only keep that behavior well defined.
+        put_state = None
+        put_sub_state = None
+        ssm_params = None
+        instance_ids = None
+        aem_component = None
 
         # message that start-offline snapshot has a task key
         if "task" in message and (
@@ -1130,7 +1164,7 @@ def sns_message_processor(event, context):
                     }
                     supplement = {**supplement, **supplement_preview}
 
-                if sub_state == "PUBLISH_READY" or sub_state == "PUBLISH_PREVIEW_READY":
+                if sub_state in ("PUBLISH_READY", "PUBLISH_PREVIEW_READY"):
                     manage_autoscaling_standby(
                         stack_prefix, "enter", byInstanceIds=dispatcher_ids
                     )

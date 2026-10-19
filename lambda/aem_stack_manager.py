@@ -6,11 +6,11 @@ Lambda function to manage AEM Stack resources.
 
 
 import os
-import boto3
 import logging
 import json
 import datetime
 import re
+import boto3
 
 
 __author__ = 'Andy Wang (andy.wang@shinesolutions.com)'
@@ -20,7 +20,7 @@ __license__ = 'Apache License, Version 2.0'
 
 # setting up logger
 logger = logging.getLogger(__name__)
-logger.setLevel(int(os.getenv('LOG_LEVEL', logging.INFO)))
+logger.setLevel(int(os.getenv('LOG_LEVEL', str(logging.INFO))))
 
 # AWS resources
 aws_region = os.getenv("AWS_REGION")
@@ -31,14 +31,17 @@ dynamodb = boto3.client('dynamodb', region_name=aws_region)
 
 
 class MyEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, datetime.datetime):
-            return obj.strftime('%Y-%m-%dT%H:%M:%S.000Z')
+    """JSON encoder that serialises datetime objects as ISO-8601 strings."""
 
-        return json.JSONEncoder.default(self, obj)
+    def default(self, o):
+        if isinstance(o, datetime.datetime):
+            return o.strftime('%Y-%m-%dT%H:%M:%S.000Z')
+
+        return json.JSONEncoder.default(self, o)
 
 
 def instance_ids_by_tags(filters):
+    """Return the IDs of EC2 instances matching the given filters."""
     response = ec2.describe_instances(
         Filters=filters
     )
@@ -51,11 +54,13 @@ def instance_ids_by_tags(filters):
 
 
 def send_ssm_cmd(cmd_details):
+    """Send an SSM run command and return the JSON-serialisable response."""
     logger.info(' calling ssm commands')
     return json.loads(json.dumps(ssm.send_command(**cmd_details), cls=MyEncoder))
 
 
 def execute_task(message, ssm_common_params):
+    """Run the SSM command for a task message against the matching instances."""
     component = message['details']['component']
     target_filter = [
         {
@@ -91,6 +96,8 @@ def execute_task(message, ssm_common_params):
 
     return send_ssm_cmd(params)
 
+
+# pylint: disable-next=too-many-arguments,too-many-positional-arguments
 def put_state_in_dynamodb(table_name, command_id, environment, task, state, timestamp, message_id, **kwargs):
 
     """
@@ -155,6 +162,7 @@ def put_state_in_dynamodb(table_name, command_id, environment, task, state, time
 
 # dynamodb is used to host state information
 def get_state_from_dynamodb(table_name, command_id):
+    """Fetch the state item for a command from DynamoDB."""
 
     item = dynamodb.get_item(
         TableName=table_name,
@@ -175,6 +183,7 @@ def get_state_from_dynamodb(table_name, command_id):
 
 
 def update_state_in_dynamodb(table_name, command_id, new_state, timestamp):
+    """Update the state and timestamp of a command item in DynamoDB."""
 
     item_update = {
         'TableName': table_name,
@@ -200,7 +209,10 @@ def update_state_in_dynamodb(table_name, command_id, new_state, timestamp):
 
     dynamodb.update_item(**item_update)
 
+
+# pylint: disable-next=unused-argument
 def sns_message_processor(event, context):
+    """Lambda handler: process SNS records that trigger tasks or report command status."""
 
     # reading in config info from either s3 or within bundle
     bucket = os.getenv('S3_BUCKET')
@@ -208,14 +220,14 @@ def sns_message_processor(event, context):
 
     if bucket is not None and prefix is not None:
         config_file = '/tmp/config.json'
-        s3.download_file(bucket, '{}/config.json'.format(prefix), config_file)
+        s3.download_file(bucket, f'{prefix}/config.json', config_file)
     else:
         logger.info('Unable to locate config.json in S3, searching within bundle')
         config_file = 'config.json'
 
-    with open(config_file, 'r') as f:
+    with open(config_file, 'r', encoding='utf-8') as f:
         content = ''.join(f.readlines()).replace('\n', '')
-        logger.debug('config file: ' + content)
+        logger.debug('config file: %s', content)
         config = json.loads(content)
         task_document_mapping = config['document_mapping']
         run_command = config['ec2_run_command']
@@ -227,17 +239,17 @@ def sns_message_processor(event, context):
         message_text = record['Sns']['Message']
         message_id = record['Sns']['MessageId']
 
-        logger.info("Message ID: " + message_id)
+        logger.info('Message ID: %s', message_id)
 
         # we could receive message from Stack Manager Topic, which trigger actions
         # and Status Topic, which tells us how the command ends
         if 'status' not in message_text:
             # Escape packageFilter if packageFilter exist
-            if message_text.find('packageFilter') is not -1:
+            if message_text.find('packageFilter') != -1:
                 # Escape packageFilter
                 message_text = re.sub('\\\\', '\\\\\\\\\\\\\\\\', message_text)
-                message_text = re.sub('\[\"\[', '["\\\"[', message_text)
-                message_text = re.sub('\]\"\]', ']\\\""]', message_text)
+                message_text = re.sub(r'\["\[','["\\\"[', message_text)
+                message_text = re.sub(r'\]"\]',']\\\""]', message_text)
                 # RegEx to find the packageFilter for export-backup Job and replace all single quotes with escaped double quotes
                 package_filter_escape_double_quotes = re.sub(r'\'', r'\\\\\\\\\\"', re.search(r'(?<=\"\\\"\[{).*(?=}\]\\\"\")', message_text).group(0))
                 message_text = re.sub(r'(?<=\"\\\"\[{).*(?=}\]\\\"\")', package_filter_escape_double_quotes, message_text)
@@ -252,7 +264,7 @@ def sns_message_processor(event, context):
             if 'externalId' in message:
                 external_id = message['externalId']
 
-            logger.info('Received request for task {}'.format(message['task']))
+            logger.info('Received request for task %s', message['task'])
             ssm_common_params = {
                 'TimeoutSeconds': 120,
                 'DocumentName': task_document_mapping[message['task']],
