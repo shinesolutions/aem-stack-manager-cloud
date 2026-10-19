@@ -2,8 +2,44 @@
 # pylint: disable=too-many-lines
 
 """
-Lambda function to manage AEM stack offline backups.
-It uses a SNS topic to help orchestrate sequence of steps
+Lambda function that takes offline snapshots of an AEM stack.
+
+An offline snapshot has to stop AEM, snapshot the repository volumes and then
+start AEM again, in a fixed order across several instances. Each step runs as
+an EC2 Run Command. The Run Command completion notification, published to the
+offline snapshot SNS topic, calls this function again to start the next step.
+So the process is a state machine, and the current state of each run is kept
+in DynamoDB under the ID of the command that is running.
+
+Two tasks are supported:
+
+* ``offline-snapshot-full-set``
+* ``offline-compaction-snapshot-full-set``, which also compacts the AEM
+  repositories before the snapshot, and afterwards compacts the remaining
+  publish instances.
+
+States of ``offline-snapshot-full-set``, in order:
+
+#. ``STOP_AUTHOR_STANDBY`` (skipped if the standby has been promoted)
+#. ``STOP_AUTHOR_PRIMARY``
+#. ``STOP_PUBLISH``
+#. ``STOP_PREVIEW_PUBLISH`` (only if the stack has preview publish)
+#. ``OFFLINE_BACKUP``
+#. ``START_AUTHOR_PRIMARY``
+#. ``START_AUTHOR_STANDBY`` (skipped if the standby has been promoted)
+#. ``START_PUBLISH``
+#. ``START_PREVIEW_PUBLISH`` (only if the stack has preview publish)
+
+``offline-compaction-snapshot-full-set`` adds ``OFFLINE_COMPACTION`` before
+``OFFLINE_BACKUP``. After the start states, it moves to
+``COMPACT_REMAINING_PUBLISHERS``, which goes through these sub-states for the
+remaining publish (and preview publish) instances: ``PUBLISH_READY`` or
+``PUBLISH_PREVIEW_READY``, ``STOP_PUBLISH``, ``COMPACT_PUBLISH`` and
+``START_PUBLISH``.
+
+While the process runs, the dispatchers in front of the instances being worked
+on are put into Auto Scaling standby, and a DynamoDB lock stops two offline
+snapshots of the same stack running at once.
 """
 
 import os
@@ -19,24 +55,42 @@ __copyright__ = "Shine Solutions"
 __license__ = "Apache License, Version 2.0"
 
 
-# setting up logger
+#: Module logger. Its level comes from the ``LOG_LEVEL`` environment variable
+#: and defaults to ``logging.INFO``.
 logger = logging.getLogger(__name__)
 logger.setLevel(int(os.getenv("LOG_LEVEL", str(logging.INFO))))
 
 
-# AWS resources
+#: AWS region of the clients below, taken from ``AWS_REGION``.
 aws_region = os.getenv("AWS_REGION")
+#: SSM client, used to send EC2 Run Commands.
 ssm = boto3.client("ssm", region_name=aws_region)
+#: EC2 client, used to find instances by tag.
 ec2 = boto3.client("ec2", region_name=aws_region)
+#: S3 client, used to download ``config.json``.
 s3 = boto3.client("s3", region_name=aws_region)
+#: DynamoDB client, used for process state and the stack lock.
 dynamodb = boto3.client("dynamodb", region_name=aws_region)
+#: SNS client, used by :func:`publish_status_message`.
 sns = boto3.client("sns", region_name=aws_region)
 
 
 class MyEncoder(json.JSONEncoder):
-    """JSON encoder that serialises datetime objects as ISO 8601 strings."""
+    """JSON encoder that serialises :class:`datetime.datetime` objects.
+
+    Datetimes become ISO 8601 strings in the form ``YYYY-MM-DDTHH:MM:SS.000Z``.
+    Any other type is passed to :class:`json.JSONEncoder`.
+    """
 
     def default(self, o):
+        """Return a JSON-serialisable form of ``o``.
+
+        :param o: Object that the standard encoder cannot serialise.
+        :type o: object
+        :returns: ``o`` formatted as a timestamp string if it is a datetime.
+        :rtype: str
+        :raises TypeError: If ``o`` is not a datetime and cannot be serialised.
+        """
         if isinstance(o, datetime.datetime):
             return o.strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
@@ -44,7 +98,15 @@ class MyEncoder(json.JSONEncoder):
 
 
 def instance_ids_by_tags(filters):
-    """Return the IDs of EC2 instances matching the given describe_instances filters."""
+    """Return the IDs of the EC2 instances that match the given filters.
+
+    :param filters: Filters in the format of
+        :meth:`EC2.Client.describe_instances`, e.g.
+        ``[{"Name": "tag:Component", "Values": ["publish"]}]``.
+    :type filters: list[dict]
+    :returns: IDs of the matching instances, across all reservations.
+    :rtype: list[str]
+    """
     response = ec2.describe_instances(Filters=filters)
     response2 = json.loads(json.dumps(response, cls=MyEncoder))
 
@@ -57,7 +119,15 @@ def instance_ids_by_tags(filters):
 
 
 def send_ssm_cmd(cmd_details):
-    """Send an SSM command and return the JSON-serialisable response."""
+    """Send an EC2 Run Command.
+
+    :param cmd_details: Keyword arguments for :meth:`SSM.Client.send_command`.
+        Must include ``DocumentName``, which is logged.
+    :type cmd_details: dict
+    :returns: The ``send_command`` response, with datetimes converted to
+        strings by :class:`MyEncoder`.
+    :rtype: dict
+    """
     ssm_document = cmd_details["DocumentName"]
     logger.info("Start calling SSM Document %s ...", ssm_document)
     response = json.loads(json.dumps(ssm.send_command(**cmd_details), cls=MyEncoder))
@@ -66,7 +136,13 @@ def send_ssm_cmd(cmd_details):
 
 
 def get_author_primary_ids(stack_prefix):
-    """Return running author-primary instance IDs for the stack."""
+    """Return the IDs of the running ``author-primary`` instances of a stack.
+
+    :param stack_prefix: Value of the ``StackPrefix`` tag.
+    :type stack_prefix: str
+    :returns: Instance IDs. A healthy stack has exactly one.
+    :rtype: list[str]
+    """
     filters = [
         {"Name": "tag:StackPrefix", "Values": [stack_prefix]},
         {"Name": "instance-state-name", "Values": ["running"]},
@@ -77,7 +153,13 @@ def get_author_primary_ids(stack_prefix):
 
 
 def get_author_standby_ids(stack_prefix):
-    """Return running author-standby instance IDs for the stack."""
+    """Return the IDs of the running ``author-standby`` instances of a stack.
+
+    :param stack_prefix: Value of the ``StackPrefix`` tag.
+    :type stack_prefix: str
+    :returns: Instance IDs. Empty if the standby has been promoted.
+    :rtype: list[str]
+    """
     filters = [
         {"Name": "tag:StackPrefix", "Values": [stack_prefix]},
         {"Name": "instance-state-name", "Values": ["running"]},
@@ -88,7 +170,16 @@ def get_author_standby_ids(stack_prefix):
 
 
 def get_promoted_author_standby_ids(stack_prefix):
-    """Return running instance IDs of author-standby instances promoted to primary."""
+    """Return the IDs of the running author-standby instances that were promoted.
+
+    A promoted instance is found by its ``Name`` tag, ``AEM Author - Primary -
+    Promoted from Standby``.
+
+    :param stack_prefix: Value of the ``StackPrefix`` tag.
+    :type stack_prefix: str
+    :returns: Instance IDs. Empty if no standby has been promoted.
+    :rtype: list[str]
+    """
     filters = [
         {"Name": "tag:StackPrefix", "Values": [stack_prefix]},
         {"Name": "instance-state-name", "Values": ["running"]},
@@ -102,7 +193,13 @@ def get_promoted_author_standby_ids(stack_prefix):
 
 
 def get_publish_ids(stack_prefix):
-    """Return running publish instance IDs for the stack."""
+    """Return the IDs of the running ``publish`` instances of a stack.
+
+    :param stack_prefix: Value of the ``StackPrefix`` tag.
+    :type stack_prefix: str
+    :returns: Instance IDs.
+    :rtype: list[str]
+    """
     filters = [
         {"Name": "tag:StackPrefix", "Values": [stack_prefix]},
         {"Name": "instance-state-name", "Values": ["running"]},
@@ -113,7 +210,13 @@ def get_publish_ids(stack_prefix):
 
 
 def get_preview_publish_ids(stack_prefix):
-    """Return running preview-publish instance IDs for the stack."""
+    """Return the IDs of the running ``preview-publish`` instances of a stack.
+
+    :param stack_prefix: Value of the ``StackPrefix`` tag.
+    :type stack_prefix: str
+    :returns: Instance IDs. Empty if the stack has no preview publish.
+    :rtype: list[str]
+    """
     filters = [
         {"Name": "tag:StackPrefix", "Values": [stack_prefix]},
         {"Name": "instance-state-name", "Values": ["running"]},
@@ -124,11 +227,42 @@ def get_preview_publish_ids(stack_prefix):
 
 
 def manage_autoscaling_standby(stack_prefix, action, **kwargs):
-    """
-    put instances in an autoscaling group into or bring them out of
-    standby mode one of byComponent or byInstanceIds must be give and not both.
-    If byInstanceIds are given, it is assumed that all the instances
-    are in the same group
+    """Move instances of an Auto Scaling group into or out of standby.
+
+    Standby takes the instances out of service, so they stop taking traffic
+    and are not replaced while AEM is stopped.
+
+    For ``enter``:
+
+    #. Suspend the ``AlarmNotification`` and ``AZRebalance`` processes.
+    #. Lower the group's ``MinSize`` by the number of instances (not below 0).
+    #. Put the instances into standby, lowering the desired capacity.
+
+    For ``exit``:
+
+    #. Take the instances out of standby.
+    #. Raise the group's ``MinSize`` by the number of instances (not above
+       ``MaxSize``).
+    #. Resume the ``AlarmNotification`` and ``AZRebalance`` processes.
+
+    Any other ``action`` does nothing.
+
+    Exactly one of ``byComponent`` and ``byInstanceIds`` should be given. If
+    both are given, ``byComponent`` is used.
+
+    :param stack_prefix: Value of the ``StackPrefix`` tag. Used with
+        ``byComponent`` and in log messages.
+    :type stack_prefix: str
+    :param action: ``enter`` or ``exit``.
+    :type action: str
+    :keyword byComponent: Use all running instances of the stack with this
+        ``Component`` tag, e.g. ``author-dispatcher``.
+    :kwtype byComponent: str
+    :keyword byInstanceIds: Use these instances. The group is looked up from
+        the first one only, so they must all be in the same group.
+    :kwtype byInstanceIds: list[str]
+    :raises ValueError: If neither ``byComponent`` nor ``byInstanceIds`` is
+        given.
     """
     if "byComponent" in kwargs:
         filters = [
@@ -164,7 +298,7 @@ def manage_autoscaling_standby(stack_prefix, action, **kwargs):
         if tag["Key"] == "aws:autoscaling:groupName"
     ][0]
 
-    # try to get the min size of the atutocaling group
+    # read the current min and max size of the autoscaling group
     autoscaling = boto3.client("autoscaling")
     asg_dcrb = autoscaling.describe_auto_scaling_groups(
         AutoScalingGroupNames=[asg_name]
@@ -172,9 +306,11 @@ def manage_autoscaling_standby(stack_prefix, action, **kwargs):
     asg_min_size = asg_dcrb["AutoScalingGroups"][0]["MinSize"]
     asg_max_size = asg_dcrb["AutoScalingGroups"][0]["MaxSize"]
 
+    # lower the min size while the instances are in standby, otherwise the
+    # group would launch replacements for them
     min_size = max(asg_min_size - len(instance_ids), 0)
 
-    # manage the instances standby mode
+    # move the instances into or out of standby
     if action == "enter":
         logger.info(
             "[%s] Start updating ASG %s to suspend processes ...",
@@ -275,7 +411,15 @@ def manage_autoscaling_standby(stack_prefix, action, **kwargs):
 
 
 def retrieve_tag_value(instance_id, tag_key):
-    """Return the value of an EC2 tag on the instance, or None if the tag is not set."""
+    """Return the value of a tag on an EC2 instance.
+
+    :param instance_id: ID of the instance.
+    :type instance_id: str
+    :param tag_key: Key of the tag, e.g. ``PairInstanceId``.
+    :type tag_key: str
+    :returns: The tag value, or ``None`` if the instance has no such tag.
+    :rtype: str or None
+    """
     response = boto3.client("ec2").describe_tags(
         Filters=[
             {"Name": "resource-id", "Values": [instance_id]},
@@ -292,15 +436,30 @@ def retrieve_tag_value(instance_id, tag_key):
 
 
 def manage_lock_for_environment(table_name, lock, action):
-    """
-    use lock as command_id to prevent concurrent backup processes
+    """Acquire or release a lock that stops two backups of a stack running at once.
+
+    The lock is a DynamoDB item whose ``command_id`` is the lock name. It is
+    created with a condition that no item with that key exists, so only one
+    caller can acquire it. The item expires after one day, so a lock left
+    behind by a failed run is eventually released.
+
+    :param table_name: Name of the DynamoDB state table.
+    :type table_name: str
+    :param lock: Name of the lock, e.g. ``<stack_prefix>_backup_lock``.
+    :type lock: str
+    :param action: ``trylock`` to acquire the lock, or ``unlock`` to release
+        it.
+    :type action: str
+    :returns: ``True`` if the lock was acquired or released, ``False`` if it
+        is already held or ``action`` is not recognised.
+    :rtype: bool
     """
 
     succeeded = False
 
     if action == "trylock":
         try:
-            # put a timestamp shows when the lock is set
+            # record when the lock was taken
             timestamp = datetime.datetime.utcnow()
 
             # item ttl is set to 1 day
@@ -339,9 +498,34 @@ def manage_lock_for_environment(table_name, lock, action):
 def stack_health_check(
     stack_prefix, min_publish_instances
 ):
-    """
-    Simple AEM stack health check based on the number of author-primary,
-    author-standby and publisher instances.
+    """Check the stack is fit for an offline snapshot and pick the instances to use.
+
+    The check is based only on the number of running instances of each
+    component. The stack is healthy when:
+
+    * it has at least ``min_publish_instances`` publish instances, and the
+      first one has a ``PairInstanceId`` tag naming its dispatcher, and
+    * it has exactly one author-primary instance, or exactly one author-standby
+      instance that was promoted to primary, and
+    * it has at least one author-standby instance, or a promoted one.
+
+    Preview publish is optional. If the stack has one, the first preview
+    publish instance and the dispatcher in its ``PreviewPairInstanceId`` tag
+    are used.
+
+    :param stack_prefix: Value of the ``StackPrefix`` tag.
+    :type stack_prefix: str
+    :param min_publish_instances: Minimum number of publish instances. A
+        numeric string is accepted.
+    :type min_publish_instances: int or str
+    :returns: ``None`` if the stack is unhealthy. Otherwise the instance ID
+        to use for each of these keys: ``author-primary``,
+        ``author-standby``, ``publish``, ``publish-dispatcher``,
+        ``preview-publish`` and ``preview-publish-dispatcher``.
+        ``author-standby`` is the string ``"Promoted"`` if the standby was
+        promoted and there is no other standby. The preview values are the
+        string ``"False"`` if there is no preview publish.
+    :rtype: dict or None
     """
 
     # Get instances by components
@@ -430,21 +614,69 @@ def stack_health_check(
 def put_state_in_dynamodb(  # pylint: disable=too-many-arguments,too-many-positional-arguments
     table_name, command_id, environment, task, state, timestamp, message_id, **kwargs
 ):
-    """
-    schema:
-    key: command_id, ec2 run command id, or externalId if provided and no cmd
-         has ran yet
-    attr:
-      environment: S usually stack_prefix
-      task: S the task this command is for, offline-snapshot-full-set, offline-compaction-snapshot-full-set, etc
-      state: S STOP_AUTHOR_STANDBY, STOP_AUTHOR_PRIMARY, .... Success, Failed
-      timestamp: S, example: 2017-05-16T01:57:05.9Z
-      ttl: one day
-    Optional attr:
-      instance_info: M, exmaple: author-primary: i-13ad9rxxxx
-      last_command:  S, Last EC2 Run Command Id that trigggers this command,
-                     used more for debugging
-      externalId: S, provided by external parties, like Jenkins/Bamboo job id
+    """Write the state of an offline snapshot step to DynamoDB.
+
+    Any existing item with the same ``command_id`` is replaced.
+
+    Item schema (DynamoDB attribute types in brackets):
+
+    ==========================  ====  ========================================
+    Attribute                   Type  Description
+    ==========================  ====  ========================================
+    ``command_id``              S     Partition key. The EC2 Run Command ID,
+                                      or the external ID if no command has
+                                      run yet.
+    ``environment``             S     Usually the stack prefix.
+    ``task``                    S     ``offline-snapshot-full-set`` or
+                                      ``offline-compaction-snapshot-full-set``.
+    ``state``                   S     Process state, e.g.
+                                      ``STOP_AUTHOR_STANDBY``, or ``Success``
+                                      or ``Failed`` when the process ends.
+    ``timestamp``               S     Time of the state, e.g.
+                                      ``2017-05-16T01:57:05.9Z``.
+    ``ttl``                     N     Expiry time in epoch seconds, one day
+                                      from now.
+    ``message_id``              S     ID of the SNS message that caused the
+                                      write.
+    ``instance_info``           M     Optional. Instance ID by component, as
+                                      returned by :func:`stack_health_check`.
+    ``last_command``            S     Optional. ID of the previous Run
+                                      Command in the chain. Mostly for
+                                      debugging.
+    ``externalId``              S     Optional. ID from an external caller,
+                                      e.g. a Jenkins or Bamboo job ID.
+    ``publish_ids``             SS    Optional. Remaining publish instances
+                                      to compact.
+    ``dispatcher_ids``          SS    Optional. Dispatchers paired with
+                                      ``publish_ids``.
+    ``preview_publish_ids``     SS    Optional. Remaining preview publish
+                                      instances to compact.
+    ``preview_dispatcher_ids``  SS    Optional. Dispatchers paired with
+                                      ``preview_publish_ids``.
+    ``sub_state``               S     Optional. Step within
+                                      ``COMPACT_REMAINING_PUBLISHERS``.
+    ==========================  ====  ========================================
+
+    :param table_name: Name of the DynamoDB table.
+    :type table_name: str
+    :param command_id: Value of the ``command_id`` key.
+    :type command_id: str
+    :param environment: Value of ``environment``.
+    :type environment: str
+    :param task: Value of ``task``.
+    :type task: str
+    :param state: Value of ``state``.
+    :type state: str
+    :param timestamp: Value of ``timestamp``.
+    :type timestamp: str
+    :param message_id: Value of ``message_id``.
+    :type message_id: str
+    :param kwargs: Optional attributes, each written only when given and not
+        ``None``: ``InstanceInfo`` (*dict*), ``LastCommand`` (*str*),
+        ``ExternalId`` (*str*), ``PublishIds`` (*list[str]*),
+        ``DispatcherIds`` (*list[str]*), ``PreviewPublishIds``
+        (*list[str]*), ``PreviewDispatcherIds`` (*list[str]*) and
+        ``SubState`` (*str*). Other keys are ignored.
     """
 
     # item ttl is set to 1 day
@@ -470,8 +702,8 @@ def put_state_in_dynamodb(  # pylint: disable=too-many-arguments,too-many-positi
     if "ExternalId" in kwargs and kwargs["ExternalId"] is not None:
         item["externalId"] = {"S": kwargs["ExternalId"]}
 
-    # the following three attributes are exclusively for compacting remaining
-    # publish instances
+    # the following attributes are only used when compacting the remaining
+    # publish and preview publish instances
     if "PublishIds" in kwargs and kwargs["PublishIds"] is not None:
         item["publish_ids"] = {"SS": kwargs["PublishIds"]}
 
@@ -490,9 +722,18 @@ def put_state_in_dynamodb(  # pylint: disable=too-many-arguments,too-many-positi
     dynamodb.put_item(TableName=table_name, Item=item)
 
 
-# dynamodb is used to host state information
 def get_state_from_dynamodb(table_name, command_id):
-    """Fetch the state item for a command ID from DynamoDB."""
+    """Read the state of a command from DynamoDB with a consistent read.
+
+    :param table_name: Name of the DynamoDB table.
+    :type table_name: str
+    :param command_id: The ``command_id`` key to read.
+    :type command_id: str
+    :returns: The raw :meth:`DynamoDB.Client.get_item` response. The item,
+        with all the attributes described in :func:`put_state_in_dynamodb`,
+        is under ``Item``. That key is missing if no item was found.
+    :rtype: dict
+    """
     item = dynamodb.get_item(
         TableName=table_name,
         Key={"command_id": {"S": command_id}},
@@ -504,7 +745,17 @@ def get_state_from_dynamodb(table_name, command_id):
 
 
 def update_state_in_dynamodb(table_name, command_id, new_state, timestamp):
-    """Update the state and timestamp of an existing DynamoDB state item."""
+    """Set the ``state`` and ``timestamp`` of a command in DynamoDB.
+
+    :param table_name: Name of the DynamoDB table.
+    :type table_name: str
+    :param command_id: The ``command_id`` key to update.
+    :type command_id: str
+    :param new_state: New value of ``state``, e.g. ``Success``.
+    :type new_state: str
+    :param timestamp: New value of ``timestamp``.
+    :type timestamp: str
+    """
     item_update = {
         "TableName": table_name,
         "Key": {"command_id": {"S": command_id}},
@@ -519,9 +770,18 @@ def update_state_in_dynamodb(table_name, command_id, new_state, timestamp):
     dynamodb.update_item(**item_update)
 
 
-# currently just forward the notification message from EC2 Run command.
 def publish_status_message(topic, message):
-    """Publish a message to the given SNS topic."""
+    """Publish a message to an SNS topic.
+
+    Intended to forward EC2 Run Command notification messages. Not called
+    anywhere in this module.
+
+    :param topic: ARN of the SNS topic.
+    :type topic: str
+    :param message: Message body. It is sent as the ``default`` message for
+        all protocols.
+    :type message: str
+    """
     payload = {"default": message}
 
     sns.publish(TopicArn=topic, MessageStructure="json", Message=json.dumps(payload))
@@ -530,7 +790,20 @@ def publish_status_message(topic, message):
 def get_remaining_publish_dispatcher_pairs(
     stack_prefix: str, completed_publish_id: str
 ):
-    """Return (publish_ids, dispatcher_ids) for publish instances excluding the completed one."""
+    """Return the publish instances still to compact, and their dispatchers.
+
+    :param stack_prefix: Value of the ``StackPrefix`` tag.
+    :type stack_prefix: str
+    :param completed_publish_id: The publish instance already compacted. It
+        must be one of the running publish instances.
+    :type completed_publish_id: str
+    :returns: A ``(publish_ids, dispatcher_ids)`` tuple. ``dispatcher_ids[i]``
+        is the ``PairInstanceId`` tag of ``publish_ids[i]``, or ``None`` if
+        it is not set.
+    :rtype: tuple[list[str], list[str]]
+    :raises ValueError: If ``completed_publish_id`` is not a running publish
+        instance.
+    """
     filters = [
         {"Name": "tag:StackPrefix", "Values": [stack_prefix]},
         {"Name": "instance-state-name", "Values": ["running"]},
@@ -550,7 +823,20 @@ def get_remaining_publish_dispatcher_pairs(
 def get_remaining_preview_publish_dispatcher_pairs(
     stack_prefix: str, completed_preview_publish_id: str
 ):
-    """Return (preview_publish_ids, dispatcher_ids) excluding the completed preview publish."""
+    """Return the preview publish instances still to compact, and their dispatchers.
+
+    :param stack_prefix: Value of the ``StackPrefix`` tag.
+    :type stack_prefix: str
+    :param completed_preview_publish_id: The preview publish instance already
+        compacted. It must be one of the running preview publish instances.
+    :type completed_preview_publish_id: str
+    :returns: A ``(preview_publish_ids, dispatcher_ids)`` tuple.
+        ``dispatcher_ids[i]`` is the ``PreviewPairInstanceId`` tag of
+        ``preview_publish_ids[i]``, or ``None`` if it is not set.
+    :rtype: tuple[list[str], list[str]]
+    :raises ValueError: If ``completed_preview_publish_id`` is not a running
+        preview publish instance.
+    """
     filters = [
         {"Name": "tag:StackPrefix", "Values": [stack_prefix]},
         {"Name": "instance-state-name", "Values": ["running"]},
@@ -570,7 +856,20 @@ def get_remaining_preview_publish_dispatcher_pairs(
 
 
 def get_stack_manager_config():
-    """Load config.json from S3 (if configured) or the lambda bundle."""
+    """Load the Stack Manager configuration.
+
+    ``config.json`` is downloaded from ``s3://$S3_BUCKET/$S3_PREFIX/`` to
+    ``/tmp/config.json`` when both environment variables are set.
+
+    .. note::
+       The warning message says the bundled ``config.json`` will be used when
+       the S3 variables are not set, but no fallback path is assigned, so
+       ``open()`` fails with :exc:`UnboundLocalError` in that case.
+
+    :returns: The parsed configuration. The sections used by this module are
+        ``ec2_run_command``, ``offline_snapshot`` and ``document_mapping``.
+    :rtype: dict
+    """
     # reading in config info from either s3 or within bundle
     bucket = os.getenv("S3_BUCKET")
     prefix = os.getenv("S3_PREFIX")
@@ -589,7 +888,19 @@ def get_stack_manager_config():
 
 
 def get_ssm_command_common_parameters(stack_manager_config):
-    """Build the SSM send_command parameters shared by all offline snapshot commands."""
+    """Build the ``send_command`` arguments shared by all offline snapshot steps.
+
+    Completion notifications for ``Success`` and ``Failed`` go to the offline
+    snapshot SNS topic, which calls :func:`sns_message_processor` again for
+    the next step.
+
+    :param stack_manager_config: Configuration from
+        :func:`get_stack_manager_config`.
+    :type stack_manager_config: dict
+    :returns: Arguments for :meth:`SSM.Client.send_command`, without
+        ``InstanceIds``, ``DocumentName``, ``Comment`` or ``Parameters``.
+    :rtype: dict
+    """
     run_command = stack_manager_config["ec2_run_command"]
     offline_snapshot_config = stack_manager_config["offline_snapshot"]
 
@@ -611,7 +922,19 @@ def get_ssm_command_common_parameters(stack_manager_config):
 def get_ssm_command_parameter_manage_service(
     instance_ids: list, aem_id: str, action: str
 ):
-    """Build SSM parameters to start/stop the AEM service on the given instances."""
+    """Build ``send_command`` arguments to start or stop the AEM service.
+
+    Uses the ``manage-service`` SSM document with a one hour timeout.
+
+    :param instance_ids: Instances to run the command on.
+    :type instance_ids: list[str]
+    :param aem_id: AEM instance type, ``author`` or ``publish``.
+    :type aem_id: str
+    :param action: ``start`` or ``stop``.
+    :type action: str
+    :returns: Arguments for :meth:`SSM.Client.send_command`.
+    :rtype: dict
+    """
     config = get_stack_manager_config()
     ssm_params = get_ssm_command_common_parameters(config)
 
@@ -634,7 +957,16 @@ def get_ssm_command_parameter_manage_service(
 
 
 def get_ssm_command_parameter_offline_compaction_snapshot(instance_ids: list):
-    """Build SSM parameters to run offline compaction on the given instances."""
+    """Build ``send_command`` arguments to compact the AEM repositories offline.
+
+    Uses the ``offline-compaction-snapshot-full-set`` SSM document with a
+    four hour timeout.
+
+    :param instance_ids: Instances to run the command on.
+    :type instance_ids: list[str]
+    :returns: Arguments for :meth:`SSM.Client.send_command`.
+    :rtype: dict
+    """
     config = get_stack_manager_config()
     ssm_params = get_ssm_command_common_parameters(config)
 
@@ -652,7 +984,16 @@ def get_ssm_command_parameter_offline_compaction_snapshot(instance_ids: list):
 
 
 def get_ssm_command_parameter_offline_snapshot(instance_ids: list):
-    """Build SSM parameters to run an offline snapshot on the given instances."""
+    """Build ``send_command`` arguments to snapshot the AEM repository volumes.
+
+    Uses the ``offline-snapshot-full-set`` SSM document with a four hour
+    timeout.
+
+    :param instance_ids: Instances to run the command on.
+    :type instance_ids: list[str]
+    :returns: Arguments for :meth:`SSM.Client.send_command`.
+    :rtype: dict
+    """
     config = get_stack_manager_config()
     ssm_params = get_ssm_command_common_parameters(config)
 
@@ -670,7 +1011,15 @@ def get_ssm_command_parameter_offline_snapshot(instance_ids: list):
 
 
 def get_ssm_command_parameter_wait_until_ready(instance_ids: list):
-    """Build SSM parameters to wait until AEM is ready on the given instances."""
+    """Build ``send_command`` arguments to wait until AEM is ready.
+
+    Uses the ``wait-until-ready`` SSM document with a two hour timeout.
+
+    :param instance_ids: Instances to run the command on.
+    :type instance_ids: list[str]
+    :returns: Arguments for :meth:`SSM.Client.send_command`.
+    :rtype: dict
+    """
     config = get_stack_manager_config()
     ssm_params = get_ssm_command_common_parameters(config)
 
@@ -694,7 +1043,27 @@ def log_command_info(
     aem_component=None,
     command_id=None,
 ):
-    """Log progress of sending an SSM command, before and after it is sent."""
+    """Log the progress of sending a Run Command for a step.
+
+    The message depends on the arguments given:
+
+    * ``command_id`` set -- the command was sent. Logs its ID.
+    * ``stack_prefix`` and ``send_command`` set -- the command is about to be
+      sent. Logs the target instances.
+    * otherwise -- logs ``send_command`` alone.
+
+    :param send_command: Name of the step, e.g. ``STOP_PUBLISH``.
+    :type send_command: str or None
+    :param stack_prefix: Stack prefix, used as a log prefix.
+    :type stack_prefix: str or None
+    :param instance_id: Target instance IDs.
+    :type instance_id: list[str] or None
+    :param aem_component: Target components, e.g. ``author-primary/publish``,
+        used as a log prefix.
+    :type aem_component: str or None
+    :param command_id: ID of the command that was sent.
+    :type command_id: str or None
+    """
     if command_id is not None:
         logger.info(
             "[%s/%s] Command ID: %s ...", stack_prefix, aem_component, command_id
@@ -720,10 +1089,45 @@ def log_command_info(
 # The process is a state machine driven by SNS messages, hence the size.
 # pylint: disable-next=too-many-branches,too-many-statements
 def sns_message_processor(event, context):
-    """
-    offline snapshot is a complicated process, requiring a few things happen in the
-    right order. This function will kick start the process. The bulk of operations
-    will happen in another lambada function.
+    """Lambda entry point: start an offline snapshot or move it to the next step.
+
+    Each SNS record is one of two kinds of message:
+
+    * **Task request** -- has ``task`` set to ``offline-snapshot-full-set`` or
+      ``offline-compaction-snapshot-full-set``, and ``stack_prefix``, plus an
+      optional ``externalId``. The stack is checked with
+      :func:`stack_health_check`, the stack lock is taken with
+      :func:`manage_lock_for_environment`, the author and publish
+      dispatchers are put into standby, and the first stop command is sent.
+    * **Run Command notification** -- has ``commandId``, ``status`` and
+      ``eventTime``. The state of the finished command is read from DynamoDB,
+      and the command for the next state is sent. See the module
+      documentation for the order of the states. When the last step is done,
+      the dispatchers are taken out of standby, the state is set to
+      ``Success`` and the lock is released.
+
+    Every command sent is recorded with :func:`put_state_in_dynamodb`, keyed
+    by its command ID, so the next notification can find it.
+
+    If a notification has the status ``Failed``, the state is set to
+    ``Failed``, the dispatchers are taken out of standby and the lock is
+    released.
+
+    .. warning::
+       Some failure paths log the error but do not return. These are an
+       unhealthy stack, a lock that is already held, a ``Failed``
+       notification and an unexpected state. Processing then goes on as if
+       the check had passed, and in some of these cases fails later with an
+       exception.
+
+    :param event: SNS event with one or more ``Records``.
+    :type event: dict
+    :param context: Lambda context object. Only logged.
+    :type context: object
+    :returns: ``{"status": "Success"}`` when the process completes.
+        Otherwise the ``send_command`` response for the command sent for the
+        last record.
+    :rtype: dict
     """
     logger.debug("Event:")
     logger.debug(event)
@@ -753,7 +1157,8 @@ def sns_message_processor(event, context):
         instance_ids = None
         aem_component = None
 
-        # message that start-offline snapshot has a task key
+        # a message with a task key starts a new offline snapshot; anything
+        # else is a Run Command notification for a step in progress
         if "task" in message and (
             message["task"] == "offline-snapshot-full-set"
             or message["task"] == "offline-compaction-snapshot-full-set"
@@ -763,8 +1168,8 @@ def sns_message_processor(event, context):
             if "externalId" in message:
                 external_id = message["externalId"]
 
-            # enclosed in try is sanity check: stack health and no concurrent
-            # runs
+            # sanity checks: the stack is healthy and no other offline
+            # snapshot of it is running
             try:
                 min_publish_instance = int(
                     offline_snapshot_config["min-publish-instances"]
@@ -785,8 +1190,8 @@ def sns_message_processor(event, context):
                     )
 
             except RuntimeError:
-                # if externalId is present, it means other parties are interested in the status.
-                # Need to put a record in daynamodb with this id duplicated to
+                # an externalId means an external party will query the status,
+                # so record the failure in DynamoDB with the externalId as the
                 # command_id
                 command_id = "none"
                 if external_id is not None:
@@ -804,7 +1209,8 @@ def sns_message_processor(event, context):
                     **supplement,
                 )
 
-            # place both author-dispather in standby mode after health check
+            # place all author-dispatcher instances in standby mode after the
+            # health check
             manage_autoscaling_standby(
                 stack_prefix, "enter", byComponent="author-dispatcher"
             )
@@ -820,14 +1226,13 @@ def sns_message_processor(event, context):
                     byInstanceIds=[instances["preview-publish-dispatcher"]],
                 )
 
-            # Check if Author Standby is promoted to primary
+            # the first step is to stop author-standby, unless it has been
+            # promoted to primary, in which case start with author-primary
             if instances["author-standby"] != "Promoted":
                 instance_ids = [instances["author-standby"]]
                 # Defining DynamoDB State
                 put_state = "STOP_AUTHOR_STANDBY"
                 aem_component = "author-standby"
-            # If Author Standby is promoted to Author Primary skip stop for
-            # Author Standby
             else:
                 author_primary_id = instances["author-primary"]
                 instance_ids = [author_primary_id]
@@ -847,7 +1252,7 @@ def sns_message_processor(event, context):
         else:
             cmd_id = message["commandId"]
 
-            # get back the state of this task
+            # look up the state that the finished command was sent for
             item = get_state_from_dynamodb(dynamodb_table, cmd_id)
 
             stack_prefix = item["Item"]["environment"]["S"]
@@ -891,7 +1296,7 @@ def sns_message_processor(event, context):
                 manage_autoscaling_standby(
                     stack_prefix, "exit", byComponent="author-dispatcher"
                 )
-                # move publish-dispatcher instnace out of standby
+                # move publish-dispatcher instance out of standby
                 manage_autoscaling_standby(
                     stack_prefix, "exit", byInstanceIds=[publish_dispatcher_id]
                 )
@@ -909,6 +1314,7 @@ def sns_message_processor(event, context):
 
                 logger.error("Command %s failed.", cmd_id)
 
+            # choose the next step from the state of the finished command
             if state == "STOP_AUTHOR_STANDBY":
                 instance_ids = [author_primary_id]
                 aem_component = "author-primary"
@@ -1084,9 +1490,8 @@ def sns_message_processor(event, context):
                     stack_prefix, "exit", byInstanceIds=[publish_dispatcher_id]
                 )
 
-                # need to continue with compact other publish instances
-                # start with checking the selected publish instance is
-                # ready after compaction
+                # go on to compact the other publish instances, starting by
+                # waiting until the compacted publish instance is ready
 
                 # Defining DynamoDB State
                 put_state = "COMPACT_REMAINING_PUBLISHERS"
@@ -1130,6 +1535,9 @@ def sns_message_processor(event, context):
                 ssm_params = get_ssm_command_parameter_wait_until_ready(instance_ids)
 
             elif state == "COMPACT_REMAINING_PUBLISHERS":
+                # the remaining publish instances go through their own
+                # sub-states: *_READY -> STOP_PUBLISH -> COMPACT_PUBLISH ->
+                # START_PUBLISH -> done
                 dispatcher_ids = item["Item"]["dispatcher_ids"]["SS"]
                 publish_instance_ids = item["Item"]["publish_ids"]["SS"]
 
@@ -1227,18 +1635,17 @@ def sns_message_processor(event, context):
             else:
                 logger.error("Unexpected state %s for command %s.", state, cmd_id)
 
-        # Logging pre-infos
+        # send the command for the next step and record its state, keyed by
+        # the new command ID, for the next notification to pick up
         log_command_info(
             send_command=put_state,
             stack_prefix=stack_prefix,
             instance_id=instance_ids,
             aem_component=aem_component,
         )
-        # Sending out ssm command
         response = send_ssm_cmd(ssm_params)
         command_id = response["Command"]["CommandId"]
 
-        # Logging post-infos
         log_command_info(
             send_command=put_state,
             stack_prefix=stack_prefix,

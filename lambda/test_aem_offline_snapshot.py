@@ -7,9 +7,15 @@
 # pylint: disable=R1703
 # pylint: disable=W0703
 """
-    tests.test_main
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    Class to test the serverless orchestration
+End-to-end tests of the :mod:`aem_offline_snapshot` state machine.
+
+Each test builds a mocked stack with :class:`test_aws_helper.AwsHelper`
+under ``moto``, sends the SNS task request to
+:func:`aem_offline_snapshot.sns_message_processor`, and then drives the
+process one step at a time. For each step it finds the command ID recorded
+for the expected state in DynamoDB and sends a ``Success`` Run Command
+notification for it. The last notification must return
+``{"status": "Success"}``.
 """
 import os
 import unittest
@@ -18,7 +24,11 @@ from test_aws_helper import AwsHelper
 os.environ["AWS_REGION"] = "ap-southeast-2"
 
 def aws_credentials():
-    """Mocked AWS Credentials for moto."""
+    """Set dummy AWS credentials and region in the environment for ``moto``.
+
+    Called at import time, before :mod:`aem_offline_snapshot` is imported,
+    because that module creates its boto3 clients on import.
+    """
     os.environ["AWS_ACCESS_KEY_ID"] = "testing"
     os.environ["AWS_SECRET_ACCESS_KEY"] = "testing"
     os.environ["AWS_SECURITY_TOKEN"] = "testing"
@@ -32,10 +42,14 @@ from aem_offline_snapshot import sns_message_processor  # pylint: disable=wrong-
 
 class TestUtils(unittest.TestCase):
     """
-    Moto mock SsmManager tests
+    Offline snapshot tests against mocked AWS services.
+
+    The tests cover both tasks (``offline-snapshot-full-set`` and
+    ``offline-compaction-snapshot-full-set``) on four stack layouts: standard
+    and preview publish, each with and without a promoted author-standby.
     """
     def aws_credentials(self):
-        """Mocked AWS Credentials for moto."""
+        """Set dummy AWS credentials and region in the environment for ``moto``."""
         os.environ["AWS_ACCESS_KEY_ID"] = "testing"
         os.environ["AWS_SECRET_ACCESS_KEY"] = "testing"
         os.environ["AWS_SECURITY_TOKEN"] = "testing"
@@ -44,7 +58,12 @@ class TestUtils(unittest.TestCase):
 
     @mock_aws
     def test_offline_snapshot_standard_architecture(self):
-        """Test offline snapshot standard architecture."""
+        """Run ``offline-snapshot-full-set`` on a standard stack.
+
+        Expected states: ``STOP_AUTHOR_STANDBY``, ``STOP_AUTHOR_PRIMARY``,
+        ``STOP_PUBLISH``, ``OFFLINE_BACKUP``, ``START_AUTHOR_PRIMARY``,
+        ``START_AUTHOR_STANDBY``, ``START_PUBLISH``.
+        """
         # Preparation
         self.aws_credentials()
         stack_prefix = "aoc-fs"
@@ -308,7 +327,13 @@ class TestUtils(unittest.TestCase):
 
     @mock_aws
     def test_offline_snapshot_preview_architecture(self):
-        """Test offline snapshot preview architecture."""
+        """Run ``offline-snapshot-full-set`` on a stack with preview publish.
+
+        Expected states: ``STOP_AUTHOR_STANDBY``, ``STOP_AUTHOR_PRIMARY``,
+        ``STOP_PUBLISH``, ``STOP_PREVIEW_PUBLISH``, ``OFFLINE_BACKUP``,
+        ``START_AUTHOR_PRIMARY``, ``START_AUTHOR_STANDBY``,
+        ``START_PUBLISH``, ``START_PREVIEW_PUBLISH``.
+        """
         # Preparation
         self.aws_credentials()
         stack_prefix = "aoc-fs-preview"
@@ -636,7 +661,12 @@ class TestUtils(unittest.TestCase):
 
     @mock_aws
     def test_offline_snapshot_standard_architecture_promoted_standby(self):
-        """Test offline snapshot standard architecture promoted standby."""
+        """Run ``offline-snapshot-full-set`` on a standard stack with a promoted standby.
+
+        The author-standby steps are skipped. Expected states:
+        ``STOP_AUTHOR_PRIMARY``, ``STOP_PUBLISH``, ``OFFLINE_BACKUP``,
+        ``START_AUTHOR_PRIMARY``, ``START_PUBLISH``.
+        """
         # Preparation
         self.aws_credentials()
         stack_prefix = "aoc-fs-promoted-author"
@@ -838,7 +868,13 @@ class TestUtils(unittest.TestCase):
 
     @mock_aws
     def test_offline_snapshot_preview_architecture_promoted_standby(self):
-        """Test offline snapshot preview architecture promoted standby."""
+        """Run ``offline-snapshot-full-set`` on a preview stack with a promoted standby.
+
+        The author-standby steps are skipped. Expected states:
+        ``STOP_AUTHOR_PRIMARY``, ``STOP_PUBLISH``, ``STOP_PREVIEW_PUBLISH``,
+        ``OFFLINE_BACKUP``, ``START_AUTHOR_PRIMARY``, ``START_PUBLISH``,
+        ``START_PREVIEW_PUBLISH``.
+        """
         # Preparation
         self.aws_credentials()
         stack_prefix = "aoc-fs-preview-promoted-standby"
@@ -1103,7 +1139,15 @@ class TestUtils(unittest.TestCase):
 
     @mock_aws
     def test_offline_compaction_snapshot_standard_architecture(self):
-        """Test offline compaction snapshot standard architecture."""
+        """Run ``offline-compaction-snapshot-full-set`` on a standard stack.
+
+        Expected states: ``STOP_AUTHOR_STANDBY``, ``STOP_AUTHOR_PRIMARY``,
+        ``STOP_PUBLISH``, ``OFFLINE_COMPACTION``, ``OFFLINE_BACKUP``,
+        ``START_AUTHOR_PRIMARY``, ``START_AUTHOR_STANDBY``,
+        ``START_PUBLISH``, then ``COMPACT_REMAINING_PUBLISHERS`` with the
+        sub-states ``PUBLISH_READY``, ``STOP_PUBLISH``, ``COMPACT_PUBLISH``
+        and ``START_PUBLISH``.
+        """
         # Preparation
         self.aws_credentials()
         stack_prefix = "aoc-fs"
@@ -1591,7 +1635,16 @@ class TestUtils(unittest.TestCase):
 
     @mock_aws
     def test_offline_compaction_snapshot_preview_architecture(self):
-        """Test offline compaction snapshot preview architecture."""
+        """Run ``offline-compaction-snapshot-full-set`` on a stack with preview publish.
+
+        Expected states: ``STOP_AUTHOR_STANDBY``, ``STOP_AUTHOR_PRIMARY``,
+        ``STOP_PUBLISH``, ``STOP_PREVIEW_PUBLISH``, ``OFFLINE_COMPACTION``,
+        ``OFFLINE_BACKUP``, ``START_AUTHOR_PRIMARY``,
+        ``START_AUTHOR_STANDBY``, ``START_PUBLISH``,
+        ``START_PREVIEW_PUBLISH``, then ``COMPACT_REMAINING_PUBLISHERS`` with
+        the sub-states ``PUBLISH_PREVIEW_READY``, ``STOP_PUBLISH``,
+        ``COMPACT_PUBLISH`` and ``START_PUBLISH``.
+        """
         # Preparation
         self.aws_credentials()
         stack_prefix = "aoc-fs-preview"
@@ -2144,7 +2197,15 @@ class TestUtils(unittest.TestCase):
 
     @mock_aws
     def test_offline_compaction_snapshot_standard_architecture_promoted_standby(self):
-        """Test offline compaction snapshot standard architecture promoted standby."""
+        """Run ``offline-compaction-snapshot-full-set`` on a standard stack with a promoted standby.
+
+        The author-standby steps are skipped. Expected states:
+        ``STOP_AUTHOR_PRIMARY``, ``STOP_PUBLISH``, ``OFFLINE_COMPACTION``,
+        ``OFFLINE_BACKUP``, ``START_AUTHOR_PRIMARY``, ``START_PUBLISH``, then
+        ``COMPACT_REMAINING_PUBLISHERS`` with the sub-states
+        ``PUBLISH_READY``, ``STOP_PUBLISH``, ``COMPACT_PUBLISH`` and
+        ``START_PUBLISH``.
+        """
         # Preparation
         self.aws_credentials()
         stack_prefix = "aoc-fs-promoted-author"
@@ -2538,7 +2599,16 @@ class TestUtils(unittest.TestCase):
 
     @mock_aws
     def test_offline_compaction_snapshot_preview_architecture_promoted_standby(self):
-        """Test offline compaction snapshot preview architecture promoted standby."""
+        """Run ``offline-compaction-snapshot-full-set`` on a preview stack with a promoted standby.
+
+        The author-standby steps are skipped. Expected states:
+        ``STOP_AUTHOR_PRIMARY``, ``STOP_PUBLISH``, ``STOP_PREVIEW_PUBLISH``,
+        ``OFFLINE_COMPACTION``, ``OFFLINE_BACKUP``, ``START_AUTHOR_PRIMARY``,
+        ``START_PUBLISH``, ``START_PREVIEW_PUBLISH``, then
+        ``COMPACT_REMAINING_PUBLISHERS`` with the sub-states
+        ``PUBLISH_PREVIEW_READY``, ``STOP_PUBLISH``, ``COMPACT_PUBLISH`` and
+        ``START_PUBLISH``.
+        """
         # Preparation
         self.aws_credentials()
         stack_prefix = "aoc-fs-preview-promoted-standby"

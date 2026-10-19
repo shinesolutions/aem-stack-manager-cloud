@@ -1,7 +1,19 @@
 # -*- coding: utf8 -*-
 
 """
-Lambda function to manage AEM Stack resources.
+Lambda function that purges old AEM EBS snapshots.
+
+It is normally triggered on a schedule by an AWS CloudWatch Events rule. Each
+invocation deletes the completed snapshots of one snapshot type (``live``,
+``offline`` or ``orchestration``) that are older than a given age.
+
+Example event::
+
+    {
+        "SnapshotType": "offline",
+        "Age": "2w",
+        "StackPrefix": "my-stack"
+    }
 """
 
 import os
@@ -17,24 +29,37 @@ __copyright__ = 'Shine Solutions'
 __license__ = 'Apache License, Version 2.0'
 
 
-# setting up logger
+#: Module logger. Its level comes from the ``LOG_LEVEL`` environment variable
+#: and defaults to ``logging.INFO``.
 logger = logging.getLogger(__name__)
 logger.setLevel(int(os.getenv('LOG_LEVEL', str(logging.INFO))))
 
 
 def purge_old_snapshots(params):
     """
-    Delete completed snapshots that are older than the requested age.
+    Delete completed EBS snapshots that are older than the requested age.
 
-    Snapshots are matched on the optional 'StackPrefix' tag, the 'SnapshotType'
-    tag and an 'AemId' tag of author or publish.
+    Only snapshots with all of these properties are deleted:
 
-    Args:
-        params: dict with 'SnapshotType', 'Age' (e.g. 2d, 12h, 1w) and
-            optionally 'StackPrefix'.
+    * status is ``completed``
+    * a ``StackPrefix`` tag equal to ``params['StackPrefix']``, or any
+      ``StackPrefix`` tag at all when no stack prefix is given
+    * a ``SnapshotType`` tag equal to ``params['SnapshotType']``
+    * an ``AemId`` tag of ``author`` or ``publish``
 
-    Raises:
-        RuntimeError: if the unit of 'Age' is not supported.
+    Deletions are spaced 0.5 seconds apart to stay under the EC2 API rate
+    limits.
+
+    :param params: Purge criteria with these keys:
+
+        * ``SnapshotType`` (*str*) -- value of the ``SnapshotType`` tag to match.
+        * ``Age`` (*str*) -- minimum age of a snapshot to delete, written as a
+          number followed by a unit: ``h`` (hours), ``d`` (days) or ``w``
+          (weeks), e.g. ``12h``, ``2d`` or ``1w``.
+        * ``StackPrefix`` (*str*, optional) -- only purge snapshots of this
+          stack.
+    :type params: dict
+    :raises RuntimeError: If the unit of ``Age`` is not ``h``, ``d`` or ``w``.
     """
 
     filters = [
@@ -69,7 +94,7 @@ def purge_old_snapshots(params):
         }
     )
 
-    # snapshots is a list
+    # lazily evaluated collection of matching ec2.Snapshot resources
     snapshots = boto3.resource('ec2').snapshots.filter(Filters=filters)
 
     quantity = params['Age'][:-1]
@@ -96,15 +121,17 @@ def purge_old_snapshots(params):
 
 def handler(event, context):  # pylint: disable=unused-argument
     """
-    Lambda entry point that purges old snapshots.
+    Lambda entry point: validate the event and purge old snapshots.
 
-    Args:
-        event: dict with 'SnapshotType' (live, offline or orchestration),
-            'Age' in the form <number>[h|d|w] and optionally 'StackPrefix'.
-        context: Lambda context object, not used.
-
-    Raises:
-        RuntimeError: if 'SnapshotType' or 'Age' is missing or invalid.
+    :param event: Purge criteria. ``SnapshotType`` must be ``live``,
+        ``offline`` or ``orchestration``. ``Age`` must match
+        ``<number>[h|d|w]`` (case-insensitive). ``StackPrefix`` is optional.
+        See :func:`purge_old_snapshots` for details.
+    :type event: dict
+    :param context: Lambda context object. Not used.
+    :type context: object
+    :raises RuntimeError: If ``SnapshotType`` or ``Age`` is missing or
+        invalid.
     """
 
     if 'SnapshotType' not in event or event['SnapshotType'] not in ['live', 'offline', 'orchestration']:
