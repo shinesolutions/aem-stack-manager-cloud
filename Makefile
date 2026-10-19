@@ -8,8 +8,6 @@ ci: clean deps lint test package
 
 clean:
 	rm -rf stage
-	rm -rf .venv
-	rm -rf .pytest_cache
 
 deps:
 	python3 -m venv .venv
@@ -44,7 +42,10 @@ package:
 	    --exclude='.DS_Store*' \
 	    --exclude='logs*' \
 	    --exclude='*.retry' \
-	    --exclude='*.iml'
+	    --exclude='*.iml' \
+	    --exclude='lambda/__pycache__*' \
+	    --exclude='.pytest_cache*' \
+	    --exclude='.venv*'
 
 release:
 	rtk release
