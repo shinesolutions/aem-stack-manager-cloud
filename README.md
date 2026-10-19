@@ -21,69 +21,131 @@ AEM Stack Manager provides the ability to do the following:
 * enable-crxde: enable crxde on selected instances.
 * run-adhoc-puppet: run adhoc puppet code provided in a tar ball.
 
-In addition, scheduled AEM Snapshots Purge function is also provided in a separate Lambada function, which uses AWS CloudWatch Events to trigger the execution. It provides a sensible default to start with.
+In addition, a scheduled AEM Snapshots Purge function is provided as a separate Lambda function, triggered by AWS CloudWatch Events.
 
- For more information, please refer to:  [aem-stack-manager](https://github.com/shinesolutions/aem-stack-manager)
+For more information, please refer to [aem-stack-manager](https://github.com/shinesolutions/aem-stack-manager).
 
 ## What is AEM Stack Manager Cloud
 
- Shine Solutions has a Java implementation of the AEM Stack Manger. This (cloud )
- implementation use cloud native technologies to do the same things. The AWS services used in this implementation includes Lambda, EC2 Run Command, DynamoDB, AWS CloudWatch. Python is used as the language for the Lambda functions.
+Shine Solutions has a Java implementation of the AEM Stack Manager.
+This cloud implementation uses cloud native technologies to do the same things.
+It is made of Python Lambda functions that use Amazon SNS, AWS Systems Manager Run Command, DynamoDB, EC2 Auto Scaling, S3 and Amazon CloudWatch.
 
- To maintain compatibility with the Java version, this cloud version uses the same SNS interface to invoke the functions.
- There is a separate repo: [aem-stack-manager-messenger](https://github.com/shinesolutions/aem-stack-manager-messenger) for sending the SNS messages that trigger the tasks.
+To maintain compatibility with the Java version, this cloud version uses the same SNS interface to invoke the functions.
+There is a separate repo, [aem-stack-manager-messenger](https://github.com/shinesolutions/aem-stack-manager-messenger), for sending the SNS messages that trigger the tasks.
 
- the sequence of events:
- `SNS -> Lambda -> EC2 Run Command -> Scripts/Puppet Manifests on instances`
-DynamoDB is used to keep the state of the Tasks.
+The sequence of events is:
 
-*Snapshots Purge* does not reply on this SNS interface.
+`SNS -> Lambda -> Run Command -> Scripts/Puppet Manifests on instances`
 
-## How to Get Start
+DynamoDB is used to keep the state of the tasks.
 
-Under *cloudformation*, it has the CloudFormation template used to create the resources: the SSM Documents, Lambda Functions, SNS Topics, DynamoDB, and necessary IAM Roles.
-Please take note of the Stack Manager Topic name, Backup Topic name, as those will be used with *AEM Stack Manager Messenger*; they have the form of AemStackManger*version*, AemOfflineBackup*version*.
-Please also take note of the task status query Lambda Function name if you plan passing in an identifier when invoking a function, and use it to query the status of the task.
-It is usually in the form: AemTaskQuery*version*. *version* is a parameter in the Cloud Formation template.
+*Snapshots Purge* does not rely on this SNS interface.
 
-Similarly CloudFormation Template for *Snapshots Purge* resources can also be found under *cloudformation*.
+This repository contains the Lambda function code only.
+The CloudFormation templates, SSM documents and Ansible playbooks that create the AWS resources were moved to [aem-aws-stack-builder](https://github.com/shinesolutions/aem-aws-stack-builder) in 2018.
 
-*Ansible* is used to orchestrate the creation of the stack, such as zip up the Python code and upload them to S3, and provide the parameters used in the CloudFormation template.
+## Lambda Functions
 
-Under *scripts*, `generate.sh` is used to create the CloudFormation Template for creating the SSM Documents from a set of include files,
-`manage-stack.sh` enlist *Ansible* to create the CloudFormation Stacks, and `task_status_query.sh` query the task status by using AWS CLI.
-`manage_document_permisson.py` help sharing the SSM documents to other accounts,
-while `output_task_doc_mapping.py` generate a AEM Stack Manager task to SSM document name mapping, to be used with AEM Stack Manager Messenger and configure the Lambda Functions.
+| Module | Handler | Purpose |
+| ------ | ------- | ------- |
+| `aem_stack_manager` | `sns_message_processor` | Runs the SSM document mapped to a task on the target instances, and records the task status in DynamoDB. |
+| `aem_offline_snapshot` | `sns_message_processor` | Runs `offline-snapshot-full-set` and `offline-compaction-snapshot-full-set` as a multi-step process (see below). |
+| `aem_task_query` | `handler` | Returns the latest status of a task by the `externalId` given when the task was triggered. |
+| `purge_snapshots` | `handler` | Deletes AEM EBS snapshots older than a given age. |
+| `cloudwatch_logs_s3_stream` | `handler` | Stores CloudWatch Logs subscription data on S3. |
 
-### Installation
+### Offline Snapshot
 
-* Run `make deps` to install [AWS CLI](http://docs.aws.amazon.com/cli/latest/userguide/installing.html), [Ansible](http://docs.ansible.com/ansible/intro_installation.html), and [Boto 3](https://boto3.readthedocs.io/en/latest/).
-* [Configure](http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html#cli-quick-configuration) AWS CLI.
+An offline snapshot stops AEM, snapshots the repository volumes, and then starts AEM again, in a fixed order across the instances.
+Each step runs as a Run Command, and the command's completion notification triggers the next step.
+The current step is kept in DynamoDB.
 
-### Usage
+* The author and publish dispatchers are put into Auto Scaling standby while the process runs, and taken out of standby when it ends.
+* A lock in DynamoDB prevents two offline snapshots of the same stack running at the same time.
+* `offline-compaction-snapshot-full-set` also compacts the AEM repositories before the snapshot.
+  It then compacts the remaining publish instances one step at a time.
+* Preview publish instances are included when the stack has them.
+* If the author-standby has been promoted to author-primary, the author-standby steps are skipped.
 
-* To create the Lambda functions, DynamoDB, and other resources:
+### Snapshots Purge
 
-    make create-stack-manager-cloud [config_path=path]
+The function takes the following input:
 
-  A sample yaml config file can be found under
-    `ansible/group_vars/aem-stack-manager-cloud.yaml`
+* `SnapshotType`: `live`, `offline` or `orchestration`
+* `Age`: minimum age of the snapshots to delete, as a number followed by `h` (hours), `d` (days) or `w` (weeks), e.g. `2w`
+* `StackPrefix` (optional): only purge the snapshots of this stack
 
-* To create Snapthos Purge related resources:
+Only completed snapshots with an `AemId` tag of `author` or `publish` are deleted.
 
-    make creaet-snapshots-purge-cloud [config_path=path]
+## Configuration
 
-* To invoke the individual tasks, please refer to [aem-stack-manager-messenger](https://github.com/shinesolutions/aem-stack-manager-messenger). It is usually just like the following:
+The functions read their settings from a `config.json` file.
+It is downloaded from `s3://<S3_BUCKET>/<S3_PREFIX>/config.json` when both environment variables are set.
+Otherwise the `config.json` bundled with the function is used.
+`aem_offline_snapshot` requires the S3 location, as it does not fall back to the bundled file.
 
-  `make deploy-artifacts`
+| Section | Keys |
+| ------- | ---- |
+| `ec2_run_command` | `cmd-output-bucket`, `cmd-output-prefix`, `status-topic-arn`, `ssm-service-role-arn`, `dynamodb-table` |
+| `document_mapping` | Task name to SSM document name, e.g. `"deploy-artifacts": "<document name>"` |
+| `offline_snapshot` | `min-publish-instances`, `sns-topic-arn` |
+| `cw_stream_s3` | `s3-bucket-cw-stream`, `s3-prefix-cw-stream` |
+
+Environment variables:
+
+* `S3_BUCKET`, `S3_PREFIX`: location of `config.json`
+* `LOG_LEVEL`: Python logging level, defaults to `INFO`
+* `AWS_REGION`: set by the Lambda runtime
+
+## Usage
+
+* To deploy the functions and the AWS resources they need, use [aem-aws-stack-builder](https://github.com/shinesolutions/aem-aws-stack-builder).
+* To invoke the individual tasks, please refer to [aem-stack-manager-messenger](https://github.com/shinesolutions/aem-stack-manager-messenger).
+  It is usually just like the following:
+
+  ```bash
+  make deploy-artifacts
+  ```
+
+* To wait for a task to finish, pass the name of the `aem_task_query` Lambda function and the task's `externalId` to `scripts/task_status_query.sh`.
+  It polls the task status every 5 seconds for up to one hour, and needs the [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) and [jq](https://jqlang.org/).
+
+  ```bash
+  scripts/task_status_query.sh <function-name> <externalId>
+  ```
+
+`scripts/create-stack.sh`, `scripts/delete-stack.sh` and `scripts/manage-stack.sh` run Ansible playbooks from an `ansible/` directory that is no longer in this repository, so they do not work on their own.
+
+## Development
+
+Requirements:
+
+* Python 3
+* [ShellCheck](https://www.shellcheck.net/) and [markdownlint-cli2](https://github.com/DavidAnson/markdownlint-cli2), used by `make lint`
+* [GitHub CLI](https://cli.github.com/), used by `make publish`
+
+Makefile targets:
+
+| Target | Description |
+| ------ | ----------- |
+| `make deps` | Create `.venv` and install the Python dependencies from `requirements.txt` |
+| `make deps-upgrade` | Upgrade the pinned dependencies in `requirements.txt` from `requirements.in` |
+| `make lint` | Run ShellCheck, Pylint, yamllint, actionlint, markdownlint and a JSON check |
+| `make test` | Run the unit tests with pytest, against AWS services mocked by moto |
+| `make package` | Create `stage/aem-stack-manager-cloud-<version>.zip` |
+| `make ci` | Run `clean`, `deps`, `lint`, `test` and `package` |
+| `make release` | Release a new version with [RTK](https://github.com/cliffano/rtk), updating `Makefile` and `CHANGELOG.md` |
+| `make publish` | Create a GitHub release for the version and upload the package to it |
+
+CI runs `make ci` on every push and pull request, inside the `shinesolutions/aem-platform-buildenv` Docker image.
 
 ## Dependencies
 
-The EC2 instances are assumed to have EC2 System Manager Agent installed and properly configured. Please refer to [amazon_ssm_agent](https://github.com/shinesolutions/amazon_ssm_agent) for a simple, easy-to-use Puppet module that supports using a proxy.
+The EC2 instances are assumed to have the AWS Systems Manager (SSM) Agent installed and properly configured.
+Please refer to [amazon_ssm_agent](https://github.com/shinesolutions/amazon_ssm_agent) for a simple, easy-to-use Puppet module that supports using a proxy.
 
 ## Going Forward
 
-Lambda function is stateless, while two of the tasks, `offline-snapshot-full-set`, `offline-compaction-snapshot-full-set` requires a few things happen in the right order and share state information between the steps.
-Using a combination of Lambda and DynamoDB can work, but is a less optimal choice due to *AWS Step Function* is not available in Sydney region when this work started.
-
-A Step Function implementation is planed and this cloud implementation will switch to that once it is available in Sydney region.
+Two of the tasks, `offline-snapshot-full-set` and `offline-compaction-snapshot-full-set`, need several steps to happen in the right order and share state between them.
+This is implemented with Lambda and DynamoDB because AWS Step Functions was not available in the Sydney region when this work started.
