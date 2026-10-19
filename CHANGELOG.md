@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Fixed
+- Fix package publishing file extension
+
 ## 3.0.1 - 2026-10-19
 ### Fixed
 - Fix package publishing source to use the context instead of main

@@ -56,6 +56,6 @@ release:
 
 publish:
 	gh release create $(version) --title $(version) --notes "" || echo "Release $(version) has been created on GitHub"
-	gh release upload $(version) stage/$(package_name)-$(version).tar.gz
+	gh release upload $(version) stage/$(package_name)-$(version).zip
 
 .PHONY:  ci clean deps lint package release publish
