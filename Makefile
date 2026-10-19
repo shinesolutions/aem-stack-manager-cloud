@@ -1,4 +1,5 @@
 version ?= 2.1.1-pre.0
+package_name ?= aem-stack-manager-cloud
 
 define python_venv
 	. .venv/bin/activate && $(1)
@@ -33,7 +34,7 @@ test:
 package:
 	mkdir -p stage
 	zip \
-	    --recurse-paths stage/aem-stack-manager-cloud-$(version).zip ./ \
+	    --recurse-paths stage/$(package_name)-$(version).zip ./ \
 	    --exclude='.git*' \
 	    --exclude='.librarian*' \
 	    --exclude='.tmp*' \
@@ -50,4 +51,8 @@ package:
 release:
 	rtk release
 
-.PHONY:  ci clean deps lint package release
+publish:
+	gh release create $(version) --title $(version) --notes "" || echo "Release $(version) has been created on GitHub"
+	gh release upload $(version) stage/$(package_name)-$(version).tar.gz
+
+.PHONY:  ci clean deps lint package release publish

@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 ### Added
 - Added .pylintrc configuration
+- Add publish Makefile target and workflow
 
 ### Changed
 - Simplify GitHub Actions release workflows to not use custom action
@@ -17,14 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Fix 'Select' as "ALL_ATTRIBUTES" combined with a ProjectionExpression is invalid
-- Fix pylint findings in aem_offline_snapshot.py
-- Fix pylint findings in aem_stack_manager.py
-- Fix pylint findings in aem_task_query.py
-- Fix pylint findings in cloudwatch_logs_s3_stream.py
-- Fix pylint findings in purge_snapshots.py
-- Fix pylint findings in test_aem_offline_snapshot.py
-- Fix pylint findings in test_aws_helper.py (Trivial fixes)
-- Fix pylint findings in test_aws_helper.py (Code fixes)
+- Fix pylint findings across Python code
 
 ## 2.1.0 - 2023-08-16
 ### Removed
