@@ -1,4 +1,4 @@
-version ?= 2.1.1-pre.0
+version ?= 3.0.0
 package_name ?= aem-stack-manager-cloud
 
 define python_venv
