@@ -12,8 +12,6 @@ jobs:
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
-        with:
-          ref: main
       - uses: cliffano/command-docker-action@v2.1.0
         with:
           command: make clean deps package
