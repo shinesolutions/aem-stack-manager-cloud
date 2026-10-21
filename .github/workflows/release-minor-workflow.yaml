@@ -9,5 +9,5 @@ jobs:
         with:
           release_type: minor
           github_token: ${{ secrets.SHINEOPENSOURCE_GITHUB_TOKEN }}
-          git_user_email: shineworks@shinesolutions.com
-          git_user_name: Shine Works
+          git_user_email: opensource@shinesolutions.com
+          git_user_name: Shine Solutions
